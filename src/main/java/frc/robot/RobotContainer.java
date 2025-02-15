@@ -1,5 +1,5 @@
 // Copyright (c) FIRST and other WPILib contributors.
-// Open Source Software; you can modify and/or share it under the terms of
+// Open Source Software; you can modify and/or share it under the terms of You aren't reading this eric?
 // the WPILib BSD license file in the root directory of this project.
 
 package frc.robot;
@@ -13,12 +13,17 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
+import edu.wpi.first.wpilibj2.command.RunCommand;
+import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
+import edu.wpi.first.wpilibj2.command.WaitUntilCommand;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import edu.wpi.first.wpilibj2.command.button.POVButton;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.LimeUtil.Limelight;
 import frc.robot.commands.TeleopDriveCommand;
+import frc.robot.subsystems.AlgaeIntake;
 import frc.robot.subsystems.Arm;
+import frc.robot.subsystems.CoralIntake;
 import frc.robot.subsystems.Lift;
 import frc.robot.subsystems.SwerveSubsystem;
 
@@ -28,6 +33,8 @@ public class RobotContainer {
     private final Limelight limelightReceiver = new Limelight("limelight3");
     private final Lift lift = new Lift();
     private final Arm arm = new Arm();
+    private final AlgaeIntake algaeIntake = new AlgaeIntake();
+    private final CoralIntake coralIntake = new CoralIntake();
     private final SwerveSubsystem drivebase = new SwerveSubsystem(
         new File(Filesystem.getDeployDirectory(), "swerve/neo"));
 
@@ -50,42 +57,85 @@ public class RobotContainer {
         ); 
 
         configureBindings();
+
+
     }
 
     private void configureBindings() {
         // DRIVER BUTTONS
 
         // Intake In and Algae In (3)
-
+        new JoystickButton(driverJoystick, 3).onTrue(
+            new InstantCommand(()->coralIntake.collect(), coralIntake)
+        ).onFalse(
+            new InstantCommand(()->coralIntake.stop(), coralIntake)
+        );
         // Intake Out and Algae Out (1)
+        new JoystickButton(driverJoystick, 1).onTrue(
+            new InstantCommand(()->coralIntake.score(), algaeIntake)
+        ).onFalse(
+            new InstantCommand(()->coralIntake.stop(), algaeIntake)
+        );
 
         // Algae Down (11)
+        new JoystickButton(driverJoystick, 11).onTrue(
+            new SequentialCommandGroup(
+                new InstantCommand(()->algaeIntake.down(), algaeIntake),
+                new WaitUntilCommand(()->algaeIntake.atSetpoint()),
+                new InstantCommand(()->algaeIntake.setUsingPID(false), algaeIntake),
+                new InstantCommand(()->algaeIntake.stop(), algaeIntake)
+
+            )
+        );
 
         // Algae Up (16)
+        new JoystickButton(driverJoystick, 16).onTrue(
+            new SequentialCommandGroup(
+                new InstantCommand(()->algaeIntake.setUsingPID(true), algaeIntake),
+                new InstantCommand(()->algaeIntake.up(), algaeIntake)
+            )
+        );
 
         // Lift Up POV 0
         new POVButton(driverJoystick, 0).onTrue(
-            new InstantCommand(()->lift.extend(), lift)
+            new RunCommand(()->lift.extend(), lift)
         ).onFalse(
             new InstantCommand(()->lift.stop(), lift)
         );
 
         // Lift Down POV 180
         new POVButton(driverJoystick, 180).onTrue(
-            new InstantCommand(()->lift.retract(), lift)
+            new RunCommand(()->lift.retract(), lift)
         ).onFalse(
             new InstantCommand(()->lift.stop(), lift)
         );
 
-        // Arm CCW (5)
+        // Lift Down Dangerously (not respecting minimum setpoint) (13)
+        new JoystickButton(driverJoystick, 13).onTrue(
+            new SequentialCommandGroup(
+                new InstantCommand(()->lift.setRespectMinimumSetpoint(false), lift),
+                new RunCommand(()->lift.retract(), lift)
+            )
+        ).onFalse(
+            new SequentialCommandGroup(
+                new InstantCommand(()->lift.setRespectMinimumSetpoint(true), lift),
+                new InstantCommand(()->lift.stop(), lift)
+            )
+        );
+
+        // Arm Toward Back (5)
         new JoystickButton(driverJoystick, 5).onTrue(
-            new InstantCommand(()->arm.moveArmCCW(), arm)
+            new RunCommand(()->arm.moveArmTowardBack(), arm)
+        ).onFalse(
+            new InstantCommand(()->arm.stop(), arm)
         );
        
-        // Arm CW (10)
+        // Arm Toward Front (10)
         new JoystickButton(driverJoystick, 10).onTrue(
-            new InstantCommand(()->arm.moveArmCW(), arm)
-        );
+            new RunCommand(()->arm.moveArmTowardFront(), arm)
+        ).onFalse(
+            new InstantCommand(()->arm.stop(), arm)
+        );;
        
         // Climber Down (7)
 
@@ -106,8 +156,7 @@ public class RobotContainer {
         // Human Station Left Lock  (3)
         new JoystickButton(operatorJoystick, 3).onTrue(
             new InstantCommand(()->{
-                // TODO: SET THIS ANGLE TO ACTUAL VALUE
-                this.driveTargetAngle = 55.0;
+                this.driveTargetAngle = drivebase.isRedAlliance() ? 126.0 : 306.0;
                 this.isTurningToAngle = true;
             })
         ).onFalse(
@@ -120,8 +169,7 @@ public class RobotContainer {
         // Human Station Right Lock Yaw (4)
         new JoystickButton(operatorJoystick, 4).onTrue(
             new InstantCommand(()->{
-                // TODO: SET THIS ANGLE TO ACTUAL VALUE
-                this.driveTargetAngle = -55.0;
+                this.driveTargetAngle = drivebase.isRedAlliance() ? 234.0 : 54.0;
                 this.isTurningToAngle = true;
             })
         ).onFalse(

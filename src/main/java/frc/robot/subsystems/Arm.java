@@ -13,15 +13,16 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.wpilibj.DutyCycleEncoder;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class Arm extends SubsystemBase {
     private final SparkMax leftMotor;
     private final SparkMax rightMotorFollower;
 
-    private final double intakeSetpoint = 200.0;
-    private final double scoreSetpoint = 30.0;
-    private final double startingSetpoint = -20.0;
+    private final double intakeSetpoint = 320.0;
+    private final double scoreSetpoint = 127.0;
+    private final double startingSetpoint = 360.0;
 
     private double kP = 0.0;
     private boolean usingPID = false;
@@ -32,12 +33,8 @@ public class Arm extends SubsystemBase {
 
     private double maxSpeed = 0.4;
     private double setpoint = startingSetpoint;
-    private double maxSetpoint = scoreSetpoint;
-    private double minSetpoint = startingSetpoint;
-    
-    
-    
-
+    private double maxSetpoint = 360;
+    private double minSetpoint = 100;
     
     public Arm() {
         leftMotor = new SparkMax(1, MotorType.kBrushless);
@@ -60,29 +57,22 @@ public class Arm extends SubsystemBase {
 
         rightMotorFollowerConfig
             .apply(globalConfig)
-            .inverted(false)
-            .follow(leftMotor);
+            .follow(leftMotor, true);
 
         leftMotor.configure(leftMotorConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
         rightMotorFollower.configure(rightMotorFollowerConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
     }
 
+    double tempVal;
     public double getSensorAsDegrees() {
-        return throughboreEncoder.get() * 360.0;
-    }
+        tempVal = throughboreEncoder.get() * 360.0;
 
- 
-    public void moveArmCCW() {
-        if (usingPID) {
-            setSetpoint(setpoint += setpointIncrementer);
-        } else {
-            if (leftMotor.getEncoder().getPosition() >= maxSetpoint) {
-                leftMotor.set(0.0);
-            } else {
-                leftMotor.set(0.2);
-            } 
+        // if the sensor wraps around and reads past 360, go higher than 360
+        if (tempVal < 10) {
+            tempVal += 360;
         }
+        return tempVal;
     }
     
     public void setSetpoint(double newSetpoint) {
@@ -95,16 +85,29 @@ public class Arm extends SubsystemBase {
         }
     }
 
-    public void moveArmCW() {
+    public void moveArmTowardBack() {
         if (usingPID) {
             setSetpoint(setpoint -= setpointIncrementer);
          } else {
-             if (leftMotor.getEncoder().getPosition() <= minSetpoint) {
+             if (getSensorAsDegrees() <= minSetpoint) {
                  leftMotor.set(0.0);
              } else {
                  leftMotor.set(-0.2);
              }
          }
+    }
+    
+    public void moveArmTowardFront() {
+        if (usingPID) {
+            setSetpoint(setpoint += setpointIncrementer);
+        } else {
+            // account for if the sensor goes past 360 
+            if (getSensorAsDegrees() >= maxSetpoint || getSensorAsDegrees() < 10.0) {
+                leftMotor.set(0.0);
+            } else {
+                leftMotor.set(0.2);
+            } 
+        }
     }
 
     public void stop() {
@@ -132,6 +135,8 @@ public class Arm extends SubsystemBase {
 
     @Override
     public void periodic() {
+        SmartDashboard.putNumber("arm position", getSensorAsDegrees());
+
         if (usingPID) {
             double speed = pid.calculate(leftMotor.getEncoder().getPosition(), setpoint);
             if(Math.abs(speed) > maxSpeed) speed = maxSpeed * Math.signum(speed);
