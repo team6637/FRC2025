@@ -11,6 +11,7 @@ import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.ConditionalCommand;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
 import edu.wpi.first.wpilibj2.command.RunCommand;
@@ -23,6 +24,7 @@ import frc.robot.LimeUtil.Limelight;
 import frc.robot.commands.TeleopDriveCommand;
 import frc.robot.subsystems.AlgaeIntake;
 import frc.robot.subsystems.Arm;
+import frc.robot.subsystems.Climber;
 import frc.robot.subsystems.CoralIntake;
 import frc.robot.subsystems.Lift;
 import frc.robot.subsystems.SwerveSubsystem;
@@ -30,17 +32,19 @@ import frc.robot.subsystems.SwerveSubsystem;
 public class RobotContainer {
     Joystick driverJoystick = new Joystick(0);
     Joystick operatorJoystick = new Joystick(1);
-    private final Limelight limelightReceiver = new Limelight("limelight3");
+    private final Limelight limelight = new Limelight("limelight");
     private final Lift lift = new Lift();
     private final Arm arm = new Arm();
     private final AlgaeIntake algaeIntake = new AlgaeIntake();
     private final CoralIntake coralIntake = new CoralIntake();
+    //private final Climber climber = new Climber();
     private final SwerveSubsystem drivebase = new SwerveSubsystem(
         new File(Filesystem.getDeployDirectory(), "swerve/neo"));
 
     private boolean isTurningToAngle = false;
     private double driveTargetAngle = 0.0;
     private boolean isTurningToSeenAprilTagAngle = false;
+    private boolean isFieldOriented = true;
 
     public RobotContainer() {
         drivebase.setDefaultCommand(
@@ -49,32 +53,60 @@ public class RobotContainer {
                 ()-> -MathUtil.applyDeadband(driverJoystick.getY(), OperatorConstants.Y_DEADBAND),
                 ()-> -MathUtil.applyDeadband(driverJoystick.getX(), OperatorConstants.Y_DEADBAND),
                 ()-> -MathUtil.applyDeadband(driverJoystick.getTwist(), OperatorConstants.TWIST_DEADBAND),
-                limelightReceiver,
+                limelight,
                 ()->isTurningToAngle,
                 ()->driveTargetAngle,
-                ()->isTurningToSeenAprilTagAngle
+                ()->isTurningToSeenAprilTagAngle,
+                ()->isFieldOriented
             )
         ); 
 
         configureBindings();
-
-
     }
 
     private void configureBindings() {
         // DRIVER BUTTONS
 
+        // DRIVE IN ROBOT RELATIVE MODE
+        new JoystickButton(driverJoystick, 2).onTrue(
+            new InstantCommand(()->{
+                this.isFieldOriented = false;
+            })
+        ).onFalse(
+            new InstantCommand(()->{
+                this.isFieldOriented = true;
+            })
+        );
+
         // Intake In and Algae In (3)
         new JoystickButton(driverJoystick, 3).onTrue(
-            new InstantCommand(()->coralIntake.collect(), coralIntake)
+            new ParallelCommandGroup(
+                new InstantCommand(()->coralIntake.collect(), coralIntake),
+                new InstantCommand(()->algaeIntake.intake(), algaeIntake)
+            ) 
         ).onFalse(
-            new InstantCommand(()->coralIntake.stop(), coralIntake)
-        );
+            new ParallelCommandGroup(
+                new InstantCommand(()->coralIntake.stop(), coralIntake),
+                new InstantCommand(()->algaeIntake.stopIntake(), algaeIntake)
+                )
+            );
+
         // Intake Out and Algae Out (1)
         new JoystickButton(driverJoystick, 1).onTrue(
-            new InstantCommand(()->coralIntake.score(), algaeIntake)
+            new ParallelCommandGroup(
+                new InstantCommand(()->algaeIntake.score(), algaeIntake),
+                new InstantCommand(()->coralIntake.score(), coralIntake)
+            )
         ).onFalse(
-            new InstantCommand(()->coralIntake.stop(), algaeIntake)
+            new SequentialCommandGroup(
+                new InstantCommand(()->coralIntake.stop(), coralIntake),
+                new InstantCommand(()->algaeIntake.stopIntake(), algaeIntake),
+            new ConditionalCommand(
+                new InstantCommand(()->arm.backOff(), arm),
+                new InstantCommand(), 
+                ()->(lift.getPosition() > 200)
+                )
+            )
         );
 
         // Algae Down (11)
@@ -84,7 +116,6 @@ public class RobotContainer {
                 new WaitUntilCommand(()->algaeIntake.atSetpoint()),
                 new InstantCommand(()->algaeIntake.setUsingPID(false), algaeIntake),
                 new InstantCommand(()->algaeIntake.stop(), algaeIntake)
-
             )
         );
 
@@ -135,12 +166,43 @@ public class RobotContainer {
             new RunCommand(()->arm.moveArmTowardFront(), arm)
         ).onFalse(
             new InstantCommand(()->arm.stop(), arm)
-        );;
+        );
+        
+
+        // Reset Yaw (14)
+        new JoystickButton(driverJoystick, 14).onTrue(
+            new InstantCommand(()->drivebase.zeroGyro(), drivebase)
+        );
+
+        // Algae Eject High (6)
+        new JoystickButton(driverJoystick, 6).onTrue(
+            new ParallelCommandGroup(
+                new InstantCommand(()->lift.setSetpoint(170), lift),
+                new InstantCommand(()->arm.setSetpoint(120), arm)
+            )
+        );
+        // Algae Eject Low (9)
+        new JoystickButton(driverJoystick, 9).onTrue(
+            new ParallelCommandGroup(
+                new InstantCommand(()->lift.setSetpoint(90), lift),
+                new InstantCommand(()->arm.setSetpoint(120), arm)
+            )
+        );
        
         // Climber Down (7)
+        // new JoystickButton(driverJoystick, 7).onTrue(
+        //     new RunCommand(()-> climber.down(), climber)
+        // ).onFalse(
+        //         new InstantCommand(()->climber.stop(), climber)
+        // );
 
-        // Climber Up (8)
-        
+        // // Climber Up (8)
+        // new JoystickButton(driverJoystick, 8).onTrue(
+        //     new RunCommand(()-> climber.up(), climber)
+        // ).onFalse(
+        //     new InstantCommand(()->climber.stop(), climber)
+        // );
+
         // OPERATOR BUTTONS
         // April Tag Lock Yaw (trigger)
         new JoystickButton(operatorJoystick, 1).onTrue(
@@ -156,7 +218,7 @@ public class RobotContainer {
         // Human Station Left Lock  (3)
         new JoystickButton(operatorJoystick, 3).onTrue(
             new InstantCommand(()->{
-                this.driveTargetAngle = drivebase.isRedAlliance() ? 126.0 : 306.0;
+                this.driveTargetAngle = drivebase.isRedAlliance() ? 306.0 : 126.0;
                 this.isTurningToAngle = true;
             })
         ).onFalse(
@@ -169,7 +231,7 @@ public class RobotContainer {
         // Human Station Right Lock Yaw (4)
         new JoystickButton(operatorJoystick, 4).onTrue(
             new InstantCommand(()->{
-                this.driveTargetAngle = drivebase.isRedAlliance() ? 234.0 : 54.0;
+                this.driveTargetAngle = drivebase.isRedAlliance() ? 54.0 : 234.0;
                 this.isTurningToAngle = true;
             })
         ).onFalse(
@@ -180,30 +242,46 @@ public class RobotContainer {
         );
 
         // April Tag Lock Yaw With Left Offset (5)
+        new JoystickButton(operatorJoystick, 5).whileTrue(
+            drivebase.driveToReef(false)
+        );
+
 
         // April Tag Lock Yaw With Right Offset (6)
+        // new JoystickButton(operatorJoystick, 6).whileTrue(
+        //     drivebase.driveToReef(true)
+        // );
+
+        // send lift to start position(10)
+        new JoystickButton(operatorJoystick, 10).onTrue(
+            new SequentialCommandGroup(
+                new InstantCommand(()->lift.goToStart(), lift),
+                new WaitUntilCommand(()->lift.atSetpoint()),
+                new InstantCommand(()->arm.goToStartingPosition(), arm)
+            )
+        );
         
-        // Send Lift to Level 3 (7)
+        // Send Lift to Level 4 (7)
         new JoystickButton(operatorJoystick, 7).onTrue(
             new ParallelCommandGroup(
-                new InstantCommand(()->lift.goToLevel3(), lift),
-                new InstantCommand(()->arm.goToScorePosition(), arm)
+                new InstantCommand(()->lift.goToLevel4(), lift),
+                new InstantCommand(()->arm.goToLevel4Position(), arm)
             )
         );
 
-        // Send Lift to Level 2 (9)
+        // Send Lift to Level 3 (9)
         new JoystickButton(operatorJoystick, 9).onTrue(
             new ParallelCommandGroup(
-                new InstantCommand(()->lift.goToLevel2(), lift),
-                new InstantCommand(()->arm.goToScorePosition(), arm)
+                new InstantCommand(()->lift.goToLevel3(), lift),
+                new InstantCommand(()->arm.goToLevel3Position(), arm)
             )
         );
 
-        // Send Lift to Level 1 (11)
+        // Send Lift to Level 2 (11)
         new JoystickButton(operatorJoystick, 11).onTrue(
             new ParallelCommandGroup(
-                new InstantCommand(()->lift.goToLevel1(), lift),
-                new InstantCommand(()->arm.goToScorePosition(), arm)
+                new InstantCommand(()->lift.goToLevel2(), lift),
+                new InstantCommand(()->arm.goToLevel2Position(), arm)
             )
         );
 

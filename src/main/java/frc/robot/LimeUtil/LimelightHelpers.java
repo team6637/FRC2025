@@ -919,6 +919,10 @@ public class LimelightHelpers {
         return getLimelightNTDouble(limelightName, "ty");
     }
 
+    public static double getTID(String limelightName) {
+        return getLimelightNTDouble(limelightName, "tid");
+    }
+
     /**
      * Gets the horizontal offset from the principal pixel/point to the target in degrees.  This is the most accurate 2d metric if you are using a calibrated camera and you don't need adjustable crosshair functionality.
      * @param limelightName Name of the Limelight camera ("" for default)

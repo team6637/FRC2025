@@ -19,23 +19,27 @@ public class Lift extends SubsystemBase {
     private final SparkMax motorLeft;
     private final SparkMax motorRightFollower;
     private final double minSetpoint = 0.0;
-    private final double maxSetpoint = 214;
+    private final double maxSetpoint = 210.5;
     private double setpoint = minSetpoint;
-    private double kP = 0.025;
+    private double kP = 0.034;
+    private double upKP = 0.04;
     private boolean usingPID = true;
     private double setpointIncrementer = 1.0;
     private final PIDController pid;
-    private double level3Setpoint = 214.0;
-    private double level2Setpoint = 87;
-    private double level1Setpoint = 0;
-    private double receiveSetpoint = 0;
+    private double level4Setpoint = 210.5;
+    private double level3Setpoint = 18;
+    private double level2Setpoint = 67;
+    private double receiveSetpoint = 111;
+    private double startingSetpoint = 0.0;
     private boolean respectMinimumSetpoint = true;
+    private boolean isMovingUp;
     
     public Lift() {
 
         motorLeft = new SparkMax(4, MotorType.kBrushless);
         motorRightFollower = new SparkMax(5, MotorType.kBrushless);
         pid = new PIDController(kP, 0.0, 0.0);
+        pid.setTolerance(10);
 
         SmartDashboard.putNumber("lift kp", kP);
 
@@ -60,6 +64,12 @@ public class Lift extends SubsystemBase {
         motorRightFollower.configure(motorRightFollowerConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
     }
 
+    public void goToLevel4() {
+        if (usingPID) {
+            setSetpoint(level4Setpoint);
+        }
+    }
+
     public void goToLevel3() {
         if (usingPID) {
             setSetpoint(level3Setpoint);
@@ -72,9 +82,9 @@ public class Lift extends SubsystemBase {
         }
     }
 
-    public void goToLevel1() {
+    public void goToStart() {
         if (usingPID) {
-            setSetpoint(level1Setpoint);
+            setSetpoint(startingSetpoint);
         }
     }
 
@@ -93,6 +103,7 @@ public class Lift extends SubsystemBase {
     }
 
     public void extend() {
+        isMovingUp = true;
         if (usingPID) {
             setSetpoint(setpoint += setpointIncrementer);
         } else {
@@ -105,6 +116,7 @@ public class Lift extends SubsystemBase {
     }
 
     public void retract() {
+        isMovingUp = false;
         if (usingPID) {
             setSetpoint(setpoint -= setpointIncrementer);
          } else {
@@ -123,6 +135,8 @@ public class Lift extends SubsystemBase {
     }
 
     public void setSetpoint(double newSetpoint) {
+        isMovingUp = (newSetpoint > setpoint) ? true : false;
+
         if (newSetpoint > maxSetpoint) {
             setpoint = maxSetpoint;
         } else if (newSetpoint < minSetpoint && respectMinimumSetpoint) {
@@ -142,28 +156,17 @@ public class Lift extends SubsystemBase {
         SmartDashboard.putNumber("lift setpoint", setpoint);
 
         // Comment out next 2 lines once the robot is tuned
-        double tempKp = SmartDashboard.getNumber("lift kp", kP);
+        //double tempKp = SmartDashboard.getNumber("lift kp", kP);
+        double tempKp = isMovingUp ? upKP : kP;
         pid.setPID(tempKp, 0.0, 0.0);
-        SmartDashboard.putNumber("lift temp kp", tempKp);
+
+        SmartDashboard.putNumber("lift kp", pid.getP());
 
         if (usingPID) {
             double speed = pid.calculate(getPosition(), setpoint);
             SmartDashboard.putNumber("lift speed", speed);
             SmartDashboard.putNumber("lift error", pid.getError());
-            SmartDashboard.putNumber("lift pid kp", pid.getP());
             motorLeft.set(speed);
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-//Forrest Was Here

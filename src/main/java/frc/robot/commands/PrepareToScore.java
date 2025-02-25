@@ -19,8 +19,8 @@ public class PrepareToScore extends SequentialCommandGroup {
   /** Creates a new PrepareToScore. */
   public PrepareToScore() {
     addCommands(
-        new InstantCommand(()->lift.goToLevel3(), lift),
-        new InstantCommand(()->arm.goToScorePosition(), arm)
+        new InstantCommand(()->lift.goToLevel4(), lift),
+        new InstantCommand(()->arm.goToLevel4Position(), arm)
     );
         
 

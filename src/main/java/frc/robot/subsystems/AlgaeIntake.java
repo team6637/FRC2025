@@ -22,11 +22,11 @@ public class AlgaeIntake extends SubsystemBase {
     private final DutyCycleEncoder throughboreEncoder;
     private final PIDController pid;
 
-    private double kP = 0.004;
+    private double kP = 0.003;
     private boolean usingPID = true;
 
-    private final double upSetpoint = 122.0;
-    private final double downSetpoint = 38.0;
+    private final double upSetpoint = 127.0;
+    private final double downSetpoint = 52.0;
 
     private double setpoint = upSetpoint;
     private double minSetpoint = downSetpoint;
@@ -74,7 +74,6 @@ public class AlgaeIntake extends SubsystemBase {
     }
 
 
-
     public void setSetpoint(double newSetpoint) {
         if (newSetpoint > maxSetpoint) {
             setpoint = maxSetpoint;
@@ -92,7 +91,9 @@ public class AlgaeIntake extends SubsystemBase {
         }
     
     public void intake() {
-        algaeIntakeMotor.set(0.3);
+        if (getSensorAsDegrees() < 110.0) {
+            algaeIntakeMotor.set(0.8);
+        }
     }
     
     public void stopIntake() {
@@ -100,7 +101,9 @@ public class AlgaeIntake extends SubsystemBase {
     }
 
     public void score() {
-        algaeIntakeMotor.set(-0.3);
+        if (getSensorAsDegrees() < 110.0) {
+            algaeIntakeMotor.set(-0.8);
+        }
     }
 
     public boolean atSetpoint() {

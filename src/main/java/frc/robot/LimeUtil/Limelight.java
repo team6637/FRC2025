@@ -5,7 +5,6 @@
 package frc.robot.LimeUtil;
 
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.LimeUtil.LimelightHelpers.LimelightResults;
 import frc.robot.LimeUtil.LimelightHelpers.PoseEstimate;
 
@@ -48,6 +47,7 @@ public class Limelight
     public Limelight (String limelightName)
     {
         this.limelightName = limelightName;
+        
     }
 
     /**
@@ -196,16 +196,19 @@ public class Limelight
         this.mostRecentTagIdSeen = 0;
     }
 
-    public double getSeenTagYaw() {
-        if(LimelightHelpers.getTV(this.limelightName)) {
-
-        }
-
-        return 0.0;
+    public boolean tagIsSeen() {
+        return LimelightHelpers.getTV(this.limelightName);
     }
 
-    public double getLockYaw() {
-        // do we see 
-        return 0.0;
+    public int getPrimaryAprilTagID() {
+        return (int)LimelightHelpers.getTID(this.limelightName);
+    }
+
+    public double getX() {
+        return LimelightHelpers.getTX(this.limelightName);
+    }
+
+    public double getY() {
+        return LimelightHelpers.getTX(this.limelightName);
     }
 }

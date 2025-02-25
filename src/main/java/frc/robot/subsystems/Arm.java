@@ -20,27 +20,32 @@ public class Arm extends SubsystemBase {
     private final SparkMax leftMotor;
     private final SparkMax rightMotorFollower;
 
-    private final double intakeSetpoint = 320.0;
-    private final double scoreSetpoint = 127.0;
-    private final double startingSetpoint = 360.0;
-
-    private double kP = 0.0;
-    private boolean usingPID = false;
+    private double kP = 0.008;
+    private boolean usingPID = true;
 
     private double setpointIncrementer = 1.0;
     private final PIDController pid;
     private final DutyCycleEncoder throughboreEncoder;
 
-    private double maxSpeed = 0.4;
+    private double maxSpeed = 0.6;
+
+    private final double intakeSetpoint = 250.0;
+    private final double level2Setpoint = 249.0;
+    private final double level3Setpoint = 43.0;
+    private final double level4Setpoint = 49.0;
+    private final double startingSetpoint = 253.0;
+    //if we need to turn around for level 3 the lift height needs to be at 187, angle stays same as level 2 for the arm
+
     private double setpoint = startingSetpoint;
-    private double maxSetpoint = 360;
-    private double minSetpoint = 100;
+    private double maxSetpoint = 253.0;
+    private double minSetpoint = 24;
     
     public Arm() {
         leftMotor = new SparkMax(1, MotorType.kBrushless);
         rightMotorFollower = new SparkMax(2, MotorType.kBrushless);
 
         throughboreEncoder = new DutyCycleEncoder(0);
+        throughboreEncoder.setInverted(true);
         pid = new PIDController(kP, 0.0, 0.0);
 
         SparkMaxConfig globalConfig = new SparkMaxConfig();
@@ -67,11 +72,7 @@ public class Arm extends SubsystemBase {
     double tempVal;
     public double getSensorAsDegrees() {
         tempVal = throughboreEncoder.get() * 360.0;
-
-        // if the sensor wraps around and reads past 360, go higher than 360
-        if (tempVal < 10) {
-            tempVal += 360;
-        }
+        if(tempVal > 260.0) tempVal = 0 - (360-tempVal);
         return tempVal;
     }
     
@@ -102,7 +103,7 @@ public class Arm extends SubsystemBase {
             setSetpoint(setpoint += setpointIncrementer);
         } else {
             // account for if the sensor goes past 360 
-            if (getSensorAsDegrees() >= maxSetpoint || getSensorAsDegrees() < 10.0) {
+            if (getSensorAsDegrees() >= maxSetpoint) {
                 leftMotor.set(0.0);
             } else {
                 leftMotor.set(0.2);
@@ -126,22 +127,67 @@ public class Arm extends SubsystemBase {
         }
     }
 
-    public void goToScorePosition() {
+    public void goToStartingPosition() {
         if (usingPID) {
-            setSetpoint(scoreSetpoint);
+            setSetpoint(startingSetpoint);
         }
+    }
+
+    public void goToLevel2Position() {
+        if (usingPID) {
+            setSetpoint(level2Setpoint);
+        }
+    }
+
+    public void goToLevel3Position() {
+        if (usingPID) {
+            setSetpoint(level3Setpoint);
+        }
+    }
+
+    public void goToLevel4Position() {
+        if (usingPID) {
+            setSetpoint(level4Setpoint);
+        }
+    }
+
+    public void backOff() {
+        setSetpoint(setpoint += 20);
     }
 
 
     @Override
     public void periodic() {
         SmartDashboard.putNumber("arm position", getSensorAsDegrees());
+        SmartDashboard.putNumber("arm setpoint", setpoint);
 
         if (usingPID) {
-            double speed = pid.calculate(leftMotor.getEncoder().getPosition(), setpoint);
+            double speed = pid.calculate(getSensorAsDegrees(), setpoint);
             if(Math.abs(speed) > maxSpeed) speed = maxSpeed * Math.signum(speed);
             leftMotor.set(speed);
         }
         
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//Forrest Was here

@@ -25,6 +25,7 @@ import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
@@ -39,10 +40,12 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Config;
 import frc.robot.Constants;
 import frc.robot.LimeUtil.Limelight;
+import frc.robot.LimeUtil.LimelightHelpers.PoseEstimate;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
@@ -61,8 +64,8 @@ public class SwerveSubsystem extends SubsystemBase
 {
 
     private final SwerveDrive swerveDrive;    
-    private final boolean useVisionPoseUpdates = false;
-    private final Limelight limelight3 = new Limelight("limelight");
+    private final boolean useVisionPoseUpdates = true;
+    public final Limelight limelight3 = new Limelight("limelight");
     public static final AprilTagFieldLayout fieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2025Reefscape);
 
     
@@ -75,8 +78,8 @@ public class SwerveSubsystem extends SubsystemBase
         try
         {
         swerveDrive = new SwerveParser(directory).createSwerveDrive(Constants.MAX_SPEED,
-            new Pose2d(new Translation2d(Meter.of(1),
-            Meter.of(4)),
+            new Pose2d(new Translation2d(Meter.of(0.501),
+            Meter.of(6.34)),
             Rotation2d.fromDegrees(0)));
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -139,6 +142,14 @@ public class SwerveSubsystem extends SubsystemBase
             swerveDrive.updateOdometry();
             updatePoseEstimation();
         }
+        SmartDashboard.putNumber("pose x", getPose().getX());
+        SmartDashboard.putNumber("pose y", getPose().getY());
+        SmartDashboard.putNumber("pose z", getPose().getRotation().getDegrees());
+
+        SmartDashboard.putNumber("ll says x is", limelight3.getLimelightPoseEstimate_wpiBlue().pose.getX());
+        SmartDashboard.putNumber("ll says y is", limelight3.getLimelightPoseEstimate_wpiBlue().pose.getY());
+        SmartDashboard.putNumber("ll says z is", limelight3.getLimelightPoseEstimate_wpiBlue().pose.getRotation().getDegrees());
+
 
     }
 
@@ -249,6 +260,28 @@ public class SwerveSubsystem extends SubsystemBase
             constraints,
             edu.wpi.first.units.Units.MetersPerSecond.of(0) // Goal end velocity in meters/sec
                                         );
+    }
+
+
+    public Command driveToReef(boolean isRightReef)
+    {
+        Pose2d targPose2d = calculateTargetPose(isRightReef);
+        SmartDashboard.putNumber("target pose x", targPose2d.getX());
+        SmartDashboard.putNumber("target pose y", targPose2d.getY());
+        SmartDashboard.putNumber("target pose z", targPose2d.getRotation().getDegrees());
+
+
+        // Create the constraints to use while pathfinding
+        PathConstraints constraints = new PathConstraints(
+            swerveDrive.getMaximumChassisVelocity(), 2.0,
+            swerveDrive.getMaximumChassisAngularVelocity(), Units.degreesToRadians(720));
+
+        // Since AutoBuilder is configured, we can use it to build pathfinding commands
+        return AutoBuilder.pathfindToPose(
+            targPose2d,
+            constraints,
+            edu.wpi.first.units.Units.MetersPerSecond.of(0) // Goal end velocity in meters/sec
+        );
     }
 
     /**
@@ -729,14 +762,43 @@ public class SwerveSubsystem extends SubsystemBase
      */
     public void updatePoseEstimation()
     {
-        Pose2d updatedPose;
-        if(isRedAlliance()) {
-            updatedPose = limelight3.getLimelightPoseEstimate_wpiRed().pose;
-        } else {
-            updatedPose = limelight3.getLimelightPoseEstimate_wpiBlue().pose;
+        if(limelight3.tagIsSeen()) {
+            PoseEstimate estimatedPose = limelight3.getLimelightPoseEstimate_wpiBlue();
+            this.swerveDrive.addVisionMeasurement(estimatedPose.pose, estimatedPose.timestampSeconds);
         }
         
+        
         // TODO: add error checking
-        this.addLimelightMeasurement(updatedPose);
+        //this.addLimelightMeasurement(updatedPose);
+    }
+
+/**
+   * This function will generate a target Absolute {@link Pose2d} given a relative AprilTag ID and relative offset pose from that AprilTag.
+   * Best when paired with the driveToPose(Pose2d) command.
+   * 
+   * @param tagID The AprilTag's ID that the offset is relative to.
+   * @param tagRelativePose2d Top-down offset to the desired AprilTag. This {@link Pose2d} will be the center of your robot, with 0 degrees facing the tag.
+   * @return The {@link Pose2d} on the field that is the desired offset pose from the desired AprilTag
+   */
+    public Pose2d getAbsolutePoseFromTagRelativePose(int tagID, Pose2d tagRelativePose2d)
+    {
+        Pose2d tagPose2d = fieldLayout.getTagPose(tagID).orElse(null).toPose2d();
+
+        return tagPose2d.transformBy(
+        new Transform2d(
+            tagRelativePose2d.getTranslation(), 
+            tagRelativePose2d.getRotation()));
+    }
+
+    public Pose2d calculateTargetPose(boolean isRight) {
+        int aprilTagId = limelight3.getPrimaryAprilTagID();
+        Optional<Pose3d> aprilTagPose = fieldLayout.getTagPose(aprilTagId);
+
+        if(!aprilTagPose.isPresent()) return null;
+
+        double yOffset = isRight ? .165 : -.165;
+
+        Pose2d tagRelativePose = new Pose2d(0.43, yOffset, new Rotation2d());
+        return getAbsolutePoseFromTagRelativePose(aprilTagId, tagRelativePose);
     }
 }
