@@ -39,7 +39,7 @@ public class Lift extends SubsystemBase {
         motorLeft = new SparkMax(4, MotorType.kBrushless);
         motorRightFollower = new SparkMax(5, MotorType.kBrushless);
         pid = new PIDController(kP, 0.0, 0.0);
-        pid.setTolerance(10);
+        pid.setTolerance(20);
 
         SmartDashboard.putNumber("lift kp", kP);
 

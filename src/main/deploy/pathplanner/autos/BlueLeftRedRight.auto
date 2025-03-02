@@ -26,6 +26,12 @@
         {
           "type": "named",
           "data": {
+            "name": "AutonPrepareAndDriveToPose"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
             "name": "DeliverCoral"
           }
         },
@@ -40,7 +46,7 @@
                     {
                       "type": "wait",
                       "data": {
-                        "waitTime": 1.0
+                        "waitTime": 0.4
                       }
                     },
                     {

@@ -33,11 +33,11 @@ public class Arm extends SubsystemBase {
     private final double level2Setpoint = 249.0;
     private final double level3Setpoint = 43.0;
     private final double level4Setpoint = 49.0;
-    private final double startingSetpoint = 253.0;
+    private final double startingSetpoint = 250.0;
     //if we need to turn around for level 3 the lift height needs to be at 187, angle stays same as level 2 for the arm
 
     private double setpoint = startingSetpoint;
-    private double maxSetpoint = 253.0;
+    private double maxSetpoint = 250.0;
     private double minSetpoint = 24;
     
     public Arm() {
@@ -47,6 +47,8 @@ public class Arm extends SubsystemBase {
         throughboreEncoder = new DutyCycleEncoder(0);
         throughboreEncoder.setInverted(true);
         pid = new PIDController(kP, 0.0, 0.0);
+        pid.setTolerance(5);
+
 
         SparkMaxConfig globalConfig = new SparkMaxConfig();
         SparkMaxConfig leftMotorConfig = new SparkMaxConfig();

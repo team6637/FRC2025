@@ -36,6 +36,7 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Config;
 import frc.robot.Constants;
@@ -64,15 +65,14 @@ public class SwerveSubsystem extends SubsystemBase
 {
 
     private final SwerveDrive swerveDrive;    
-    private final boolean useVisionPoseUpdates = true;
+    private boolean useVisionPoseUpdates = true;
     public final Limelight limelight3 = new Limelight("limelight");
+    //public final Limelight limelight2 = new Limelight("limelight2");
     public static final AprilTagFieldLayout fieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2025Reefscape);
 
     
     public SwerveSubsystem(File directory)
     {
-        //this.limelight3 = limelight3;
-
         // Configure the Telemetry before creating the SwerveDrive to avoid unnecessary objects being created.
         SwerveDriveTelemetry.verbosity = TelemetryVerbosity.HIGH;
         try
@@ -108,6 +108,8 @@ public class SwerveSubsystem extends SubsystemBase
         // Pose3d aprilTagPose = fieldLayout.getTagPose(1);
 
         // SmartDashboard.putNumber("april tag pose", 
+
+        zeroGyroWithAlliance();
         
     }
 
@@ -141,16 +143,19 @@ public class SwerveSubsystem extends SubsystemBase
         if(useVisionPoseUpdates) {
             swerveDrive.updateOdometry();
             updatePoseEstimation();
+
+            
+            if(limelight3.getLimelightPoseEstimate_wpiBlue().pose != null) {
+                SmartDashboard.putNumber("ll says x is", limelight3.getLimelightPoseEstimate_wpiBlue().pose.getX());
+                SmartDashboard.putNumber("ll says y is", limelight3.getLimelightPoseEstimate_wpiBlue().pose.getY());
+                SmartDashboard.putNumber("ll says z is", limelight3.getLimelightPoseEstimate_wpiBlue().pose.getRotation().getDegrees());
+            }
+    
         }
+
         SmartDashboard.putNumber("pose x", getPose().getX());
         SmartDashboard.putNumber("pose y", getPose().getY());
         SmartDashboard.putNumber("pose z", getPose().getRotation().getDegrees());
-
-        SmartDashboard.putNumber("ll says x is", limelight3.getLimelightPoseEstimate_wpiBlue().pose.getX());
-        SmartDashboard.putNumber("ll says y is", limelight3.getLimelightPoseEstimate_wpiBlue().pose.getY());
-        SmartDashboard.putNumber("ll says z is", limelight3.getLimelightPoseEstimate_wpiBlue().pose.getRotation().getDegrees());
-
-
     }
 
     @Override
@@ -251,7 +256,7 @@ public class SwerveSubsystem extends SubsystemBase
     {
     // Create the constraints to use while pathfinding
         PathConstraints constraints = new PathConstraints(
-            swerveDrive.getMaximumChassisVelocity(), 4.0,
+            swerveDrive.getMaximumChassisVelocity(), 1.0,
             swerveDrive.getMaximumChassisAngularVelocity(), Units.degreesToRadians(720));
 
     // Since AutoBuilder is configured, we can use it to build pathfinding commands
@@ -265,15 +270,14 @@ public class SwerveSubsystem extends SubsystemBase
 
     public Command driveToReef(boolean isRightReef)
     {
-        Pose2d targPose2d = calculateTargetPose(isRightReef);
-        SmartDashboard.putNumber("target pose x", targPose2d.getX());
-        SmartDashboard.putNumber("target pose y", targPose2d.getY());
-        SmartDashboard.putNumber("target pose z", targPose2d.getRotation().getDegrees());
-
+        Pose2d targPose2d = calculateTargetReefPose(isRightReef);
+        if (targPose2d == null) {
+            return new InstantCommand();
+        }
 
         // Create the constraints to use while pathfinding
         PathConstraints constraints = new PathConstraints(
-            swerveDrive.getMaximumChassisVelocity(), 2.0,
+            swerveDrive.getMaximumChassisVelocity(), 1.0,
             swerveDrive.getMaximumChassisAngularVelocity(), Units.degreesToRadians(720));
 
         // Since AutoBuilder is configured, we can use it to build pathfinding commands
@@ -763,13 +767,15 @@ public class SwerveSubsystem extends SubsystemBase
     public void updatePoseEstimation()
     {
         if(limelight3.tagIsSeen()) {
-            PoseEstimate estimatedPose = limelight3.getLimelightPoseEstimate_wpiBlue();
-            this.swerveDrive.addVisionMeasurement(estimatedPose.pose, estimatedPose.timestampSeconds);
+            PoseEstimate estimatedPose = isRedAlliance() ? limelight3.getLimelightPoseEstimate_wpiRed() : limelight3.getLimelightPoseEstimate_wpiBlue();
+
+            // this.swerveDrive.addVisionMeasurement(new Pose2d(estimatedPose.pose.getX(), estimatedPose.pose.getY(),getHeading()), estimatedPose.timestampSeconds);
+            // double heading = isRedAlliance() ? Math.IEEEremainder(estimatedPose.pose.getRotation().getDegrees() + 180.0, 360) : estimatedPose.pose.getRotation().getDegrees();
+
+            // Rotation2d rot = new Rotation2d(Math.toRadians(heading));
+
+            this.swerveDrive.addVisionMeasurement(new Pose2d(estimatedPose.pose.getX(), estimatedPose.pose.getY(), estimatedPose.pose.getRotation()), estimatedPose.timestampSeconds);
         }
-        
-        
-        // TODO: add error checking
-        //this.addLimelightMeasurement(updatedPose);
     }
 
 /**
@@ -782,23 +788,33 @@ public class SwerveSubsystem extends SubsystemBase
    */
     public Pose2d getAbsolutePoseFromTagRelativePose(int tagID, Pose2d tagRelativePose2d)
     {
+        if(tagID == 0) return null;
         Pose2d tagPose2d = fieldLayout.getTagPose(tagID).orElse(null).toPose2d();
-
-        return tagPose2d.transformBy(
+        Pose2d finalPose = tagPose2d.transformBy(
         new Transform2d(
             tagRelativePose2d.getTranslation(), 
             tagRelativePose2d.getRotation()));
+
+            SmartDashboard.putNumber("target pose x", finalPose.getX());
+            SmartDashboard.putNumber("target pose y", finalPose.getY());
+            SmartDashboard.putNumber("target pose z", finalPose.getRotation().getDegrees());
+        return finalPose;
     }
 
-    public Pose2d calculateTargetPose(boolean isRight) {
+    public Pose2d calculateTargetReefPose(boolean isRight) {
         int aprilTagId = limelight3.getPrimaryAprilTagID();
         Optional<Pose3d> aprilTagPose = fieldLayout.getTagPose(aprilTagId);
 
         if(!aprilTagPose.isPresent()) return null;
 
-        double yOffset = isRight ? .165 : -.165;
-
-        Pose2d tagRelativePose = new Pose2d(0.43, yOffset, new Rotation2d());
+        double yOffset = isRight ? .10 : -.25;
+        // x was originally .43
+        Pose2d tagRelativePose = new Pose2d(0.38, yOffset, new Rotation2d());
         return getAbsolutePoseFromTagRelativePose(aprilTagId, tagRelativePose);
+    }
+
+    public void updateUseVisionPoseUpdates(Boolean v) {
+        this.useVisionPoseUpdates = true;
+
     }
 }

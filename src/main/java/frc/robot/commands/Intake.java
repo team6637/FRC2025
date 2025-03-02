@@ -18,20 +18,15 @@ import frc.robot.subsystems.Lift;
 // information, see:
 // https://docs.wpilib.org/en/stable/docs/software/commandbased/convenience-features.html
 public class Intake extends SequentialCommandGroup {
-   private final Lift lift = new Lift();
-    private final Arm arm = new Arm();
-    private final CoralIntake coralintake = new CoralIntake();
-  public Intake() {
-    // Add your commands in the addCommands() call, e.g.
-    // addCommands(new FooCommand(), new BarCommand());
+  public Intake(Arm arm, CoralIntake coralIntake, Lift lift) {
     addCommands(
         new WaitUntilCommand(()->lift.atSetpoint()),
         new WaitUntilCommand(()->arm.atSetpoint()),
         new ParallelRaceGroup(
-            new RunCommand(()->coralintake.collect(), coralintake),
-            new WaitUntilCommand(()->coralintake.hasCoral())  
+            new RunCommand(()->coralIntake.collect(), coralIntake),
+            new WaitUntilCommand(()->coralIntake.hasCoral())  
         ),
-        new InstantCommand(()->coralintake.stop(), coralintake)
+        new InstantCommand(()->coralIntake.stop(), coralIntake)
     );
   }
 }

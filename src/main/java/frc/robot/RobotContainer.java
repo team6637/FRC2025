@@ -5,10 +5,17 @@
 package frc.robot;
 
 import java.io.File;
+import java.util.Set;
+
+import com.pathplanner.lib.auto.NamedCommands;
 
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.ConditionalCommand;
@@ -21,6 +28,12 @@ import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import edu.wpi.first.wpilibj2.command.button.POVButton;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.LimeUtil.Limelight;
+import frc.robot.commands.AutoDriveToPose;
+import frc.robot.commands.AutonPrepareAndDriveToPose;
+import frc.robot.commands.DeliverCoral;
+import frc.robot.commands.Intake;
+import frc.robot.commands.PrepareToIntake;
+import frc.robot.commands.PrepareToScore;
 import frc.robot.commands.TeleopDriveCommand;
 import frc.robot.subsystems.AlgaeIntake;
 import frc.robot.subsystems.Arm;
@@ -38,15 +51,27 @@ public class RobotContainer {
     private final AlgaeIntake algaeIntake = new AlgaeIntake();
     private final CoralIntake coralIntake = new CoralIntake();
     //private final Climber climber = new Climber();
-    private final SwerveSubsystem drivebase = new SwerveSubsystem(
-        new File(Filesystem.getDeployDirectory(), "swerve/neo"));
+    private final SwerveSubsystem drivebase;
 
     private boolean isTurningToAngle = false;
     private double driveTargetAngle = 0.0;
     private boolean isTurningToSeenAprilTagAngle = false;
     private boolean isFieldOriented = true;
+    SendableChooser<Command> chooser = new SendableChooser<>();
 
     public RobotContainer() {
+        drivebase = new SwerveSubsystem(
+            new File(Filesystem.getDeployDirectory(), "swerve/neo"));
+
+        NamedCommands.registerCommand("PrepareToScore", new PrepareToScore(arm, lift));
+        NamedCommands.registerCommand("PrepareToIntake", new PrepareToIntake(arm, lift));
+        NamedCommands.registerCommand("Intake", new Intake(arm, coralIntake, lift));
+        NamedCommands.registerCommand("DeliverCoral", new DeliverCoral(arm, coralIntake, lift));
+        NamedCommands.registerCommand("AutonPrepareAndDriveToPose", new AutonPrepareAndDriveToPose(drivebase));
+        NamedCommands.registerCommand("EnableVisionPoseUpdates", new InstantCommand(()->drivebase.updateUseVisionPoseUpdates(true)));
+        NamedCommands.registerCommand("DisableVisionPoseUpdates", new InstantCommand(()->drivebase.updateUseVisionPoseUpdates(false)));
+
+
         drivebase.setDefaultCommand(
             new TeleopDriveCommand(
                 drivebase, 
@@ -59,9 +84,15 @@ public class RobotContainer {
                 ()->isTurningToSeenAprilTagAngle,
                 ()->isFieldOriented
             )
-        ); 
+        );
 
         configureBindings();
+
+        chooser.setDefaultOption("test 1 meter ", drivebase.getAutonomousCommand("TestOneMeterForward"));
+        chooser.addOption("test 3 meters", drivebase.getAutonomousCommand("TestThreeMetersForward"));
+        chooser.addOption("Blue Left Right Red", drivebase.getAutonomousCommand("BlueLeftRedRight"));
+
+        SmartDashboard.putData(chooser);
     }
 
     private void configureBindings() {
@@ -100,12 +131,12 @@ public class RobotContainer {
         ).onFalse(
             new SequentialCommandGroup(
                 new InstantCommand(()->coralIntake.stop(), coralIntake),
-                new InstantCommand(()->algaeIntake.stopIntake(), algaeIntake),
-            new ConditionalCommand(
-                new InstantCommand(()->arm.backOff(), arm),
-                new InstantCommand(), 
-                ()->(lift.getPosition() > 200)
-                )
+                new InstantCommand(()->algaeIntake.stopIntake(), algaeIntake)
+           // new ConditionalCommand(
+                //new InstantCommand(()->arm.backOff(), arm),
+                //new InstantCommand(), 
+                //()->(lift.getPosition() > 200)
+                
             )
         );
 
@@ -171,7 +202,7 @@ public class RobotContainer {
 
         // Reset Yaw (14)
         new JoystickButton(driverJoystick, 14).onTrue(
-            new InstantCommand(()->drivebase.zeroGyro(), drivebase)
+            new InstantCommand(()->drivebase.zeroGyroWithAlliance(), drivebase)
         );
 
         // Algae Eject High (6)
@@ -215,7 +246,12 @@ public class RobotContainer {
             })
         );
 
-        // Human Station Left Lock  (3)
+
+        // Human Station Left  (3)
+        // new JoystickButton(operatorJoystick, 3).whileTrue(
+        //     Commands.defer(()->drivebase.driveToPose(drivebase.getAbsolutePoseFromTagRelativePose(getHumanStationId(false), new Pose2d(0.25, 0, new Rotation2d()))), Set.of(drivebase))
+        // );
+
         new JoystickButton(operatorJoystick, 3).onTrue(
             new InstantCommand(()->{
                 this.driveTargetAngle = drivebase.isRedAlliance() ? 306.0 : 126.0;
@@ -228,7 +264,10 @@ public class RobotContainer {
             })
         );
 
-        // Human Station Right Lock Yaw (4)
+        // Human Station Right (4)
+        // new JoystickButton(operatorJoystick, 4).whileTrue(
+        //     Commands.defer(()->drivebase.driveToPose(drivebase.getAbsolutePoseFromTagRelativePose(getHumanStationId(true), new Pose2d(0.25, 0, new Rotation2d()))), Set.of(drivebase))
+        // );
         new JoystickButton(operatorJoystick, 4).onTrue(
             new InstantCommand(()->{
                 this.driveTargetAngle = drivebase.isRedAlliance() ? 54.0 : 234.0;
@@ -241,22 +280,25 @@ public class RobotContainer {
             })
         );
 
+
         // April Tag Lock Yaw With Left Offset (5)
         new JoystickButton(operatorJoystick, 5).whileTrue(
-            drivebase.driveToReef(false)
+            new AutoDriveToPose(drivebase, ()->drivebase.calculateTargetReefPose(false))
+        );
+        
+
+        // April Tag Lock Yaw With Right Offset (6)
+        new JoystickButton(operatorJoystick, 6).whileTrue(
+            new AutoDriveToPose(drivebase, ()->drivebase.calculateTargetReefPose(true))
         );
 
 
-        // April Tag Lock Yaw With Right Offset (6)
-        // new JoystickButton(operatorJoystick, 6).whileTrue(
-        //     drivebase.driveToReef(true)
-        // );
 
         // send lift to start position(10)
         new JoystickButton(operatorJoystick, 10).onTrue(
             new SequentialCommandGroup(
                 new InstantCommand(()->lift.goToStart(), lift),
-                new WaitUntilCommand(()->lift.atSetpoint()),
+                //new WaitUntilCommand(()->lift.atSetpoint()),
                 new InstantCommand(()->arm.goToStartingPosition(), arm)
             )
         );
@@ -295,6 +337,20 @@ public class RobotContainer {
     }
 
     public Command getAutonomousCommand() {
-        return Commands.print("No autonomous command configured");
+        return chooser.getSelected();
+    }
+
+    public int getHumanStationId(boolean isRight) {
+        if(this.drivebase.isRedAlliance() && isRight) {
+            return 2;
+        } else if(this.drivebase.isRedAlliance() && !isRight) {
+            return 1;
+        } else if(!this.drivebase.isRedAlliance() && isRight) {
+            return 12;
+        } else if(!this.drivebase.isRedAlliance() && !isRight) {
+            return 13;
+        } else {
+            return 0;
+        }
     }
 }

@@ -16,18 +16,12 @@ import frc.robot.subsystems.Lift;
 // information, see:
 // https://docs.wpilib.org/en/stable/docs/software/commandbased/convenience-features.html
 public class DeliverCoral extends SequentialCommandGroup {
-    private final Lift lift = new Lift();
-    private final Arm arm = new Arm();
-    private final CoralIntake coralintake = new CoralIntake();
-
-    public DeliverCoral() {
-    // Add your commands in the addCommands() call, e.g.
-    // addCommands(new FooCommand(), new BarCommand());
-    addCommands(
-        new WaitUntilCommand(()->lift.atSetpoint()),
-        new WaitUntilCommand(()->arm.atSetpoint()),
-        new RunCommand(()->coralintake.score(), coralintake).withTimeout(1),
-        new InstantCommand(()->coralintake.stop(), coralintake)
-    );
-  }
+    public DeliverCoral(Arm arm, CoralIntake coralIntake, Lift lift) {
+        addCommands(
+            new WaitUntilCommand(()->lift.atSetpoint()),
+            new WaitUntilCommand(()->arm.atSetpoint()),
+            new RunCommand(()->coralIntake.score(), coralIntake).withTimeout(1),
+            new InstantCommand(()->coralIntake.stop(), coralIntake)
+        );
+    }
 }

@@ -133,16 +133,16 @@ public class TeleopDriveCommand extends Command {
         if(isFieldOriented.getAsBoolean()) {
             swerve.driveFieldOriented(
                 new ChassisSpeeds(
-                    xVelocity * maxSwerveVelocity * 0.4,
-                    yVelocity * maxSwerveVelocity * 0.4,
+                    xVelocity * maxSwerveVelocity * 0.7,
+                    yVelocity * maxSwerveVelocity * 0.7,
                     angVelocity
                 )
             );
         } else {
             swerve.drive(
                 new ChassisSpeeds(
-                    xVelocity * maxSwerveVelocity * 0.4,
-                    yVelocity * maxSwerveVelocity * 0.4,
+                    xVelocity * maxSwerveVelocity * 0.7,
+                    yVelocity * maxSwerveVelocity * 0.7,
                     angVelocity 
                 )
             );

@@ -12,15 +12,11 @@ import frc.robot.subsystems.Lift;
 // NOTE:  Consider using this command inline, rather than writing a subclass.  For more
 // information, see:
 // https://docs.wpilib.org/en/stable/docs/software/commandbased/convenience-features.html
-public class PrepareToIntake extends SequentialCommandGroup {
-    private final Lift lift = new Lift();
-    private final Arm arm = new Arm();
-  
-    public PrepareToIntake() {
-   
-    addCommands(
-        new InstantCommand(()->lift.goToRecieveSetpoint(), lift),
-        new InstantCommand(()->arm.goToRecievePosition(), arm)
-    );
-  }
+public class PrepareToIntake extends SequentialCommandGroup {  
+    public PrepareToIntake(Arm arm, Lift lift) {
+        addCommands(
+            new InstantCommand(()->lift.goToRecieveSetpoint(), lift),
+            new InstantCommand(()->arm.goToRecievePosition(), arm)
+        );
+    }
 }
