@@ -17,10 +17,16 @@
               {
                 "type": "path",
                 "data": {
-                  "pathName": "BRRLStartToReef"
+                  "pathName": "RightStartToReef"
                 }
               }
             ]
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "AutonDriveToReef"
           }
         },
         {
@@ -30,19 +36,25 @@
           }
         },
         {
+          "type": "named",
+          "data": {
+            "name": "BackOff"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "UseFrontCamera"
+          }
+        },
+        {
           "type": "parallel",
           "data": {
             "commands": [
               {
-                "type": "parallel",
+                "type": "sequential",
                 "data": {
                   "commands": [
-                    {
-                      "type": "wait",
-                      "data": {
-                        "waitTime": 1.0
-                      }
-                    },
                     {
                       "type": "named",
                       "data": {
@@ -55,10 +67,16 @@
               {
                 "type": "path",
                 "data": {
-                  "pathName": "BRRLToHumanStation"
+                  "pathName": "RightToCoralStation"
                 }
               }
             ]
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "AutonDriveToHumanStation"
           }
         },
         {
@@ -68,22 +86,47 @@
           }
         },
         {
+          "type": "named",
+          "data": {
+            "name": "UseBackCamera"
+          }
+        },
+        {
           "type": "parallel",
           "data": {
             "commands": [
               {
-                "type": "named",
+                "type": "path",
                 "data": {
-                  "name": "PrepareToScore"
+                  "pathName": "RightCoralStationToReef"
                 }
               },
               {
-                "type": "path",
+                "type": "sequential",
                 "data": {
-                  "pathName": "BRRLHumanStationToCoral"
+                  "commands": [
+                    {
+                      "type": "wait",
+                      "data": {
+                        "waitTime": 0.4
+                      }
+                    },
+                    {
+                      "type": "named",
+                      "data": {
+                        "name": "PrepareToScore"
+                      }
+                    }
+                  ]
                 }
               }
             ]
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "AutonDriveToReef"
           }
         },
         {
@@ -93,35 +136,9 @@
           }
         },
         {
-          "type": "parallel",
+          "type": "named",
           "data": {
-            "commands": [
-              {
-                "type": "parallel",
-                "data": {
-                  "commands": [
-                    {
-                      "type": "wait",
-                      "data": {
-                        "waitTime": 1.0
-                      }
-                    },
-                    {
-                      "type": "named",
-                      "data": {
-                        "name": "PrepareToIntake"
-                      }
-                    }
-                  ]
-                }
-              },
-              {
-                "type": "path",
-                "data": {
-                  "pathName": "BRRLLastStep"
-                }
-              }
-            ]
+            "name": "BackOff"
           }
         }
       ]

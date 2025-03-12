@@ -18,7 +18,6 @@ public class AutoDriveToPose extends Command {
     Supplier<Pose2d> targetPose;
     double targetRotation;
     private final double maxSwerveVelocity;
-    private final double maxSwerveAngularVelocity;
     private double driveKp = 4.0;
     private double turnKp = 0.045;
     private PIDController xController;
@@ -37,7 +36,6 @@ public class AutoDriveToPose extends Command {
         this.targetPose = targetPose;
 
         this.maxSwerveVelocity = swerve.getSwerveDrive().getMaximumChassisVelocity();
-        this.maxSwerveAngularVelocity = swerve.getSwerveDrive().getMaximumChassisAngularVelocity();
 
         xController = new PIDController(driveKp, 0.0, 0.0);
         yController = new PIDController(driveKp, 0.0, 0.0);
@@ -48,8 +46,8 @@ public class AutoDriveToPose extends Command {
     // Called when the command is initially scheduled.
     @Override
     public void initialize() {
-        xController.setTolerance(0.1, 2.0); // 2 inches
-        yController.setTolerance(0.1, 2.0); // 2 inches
+        xController.setTolerance(0.05, 1.0); 
+        yController.setTolerance(0.05, 1.0);
         counter = 0;
         targetIsSet = false;
     }
@@ -57,18 +55,24 @@ public class AutoDriveToPose extends Command {
     // Called every time the scheduler runs while the command is scheduled.
     @Override
     public void execute() {
-        SmartDashboard.putBoolean("auton target is set", targetIsSet);
-        SmartDashboard.putNumber("auton counter", counter);
-        SmartDashboard.putBoolean("auton at setpoint", xController.atSetpoint());
-
         if (!targetIsSet) {
             // check if target pose is not null
             if(targetPose.get() != null) {
-                targetIsSet = true;
-                xController.setSetpoint(targetPose.get().getX());
-                yController.setSetpoint(targetPose.get().getY());
-                targetRotation = targetPose.get().getRotation().getDegrees();
+                try {
+                    xController.setSetpoint(targetPose.get().getX());
+                    yController.setSetpoint(targetPose.get().getY());
+                    targetRotation = targetPose.get().getRotation().getDegrees();
+                    targetIsSet = true;
+
+                } catch (Exception e) {
+                    // TODO: handle exception
+                }
+                
             }
+
+            swerve.driveFieldOriented(
+                new ChassisSpeeds(0.0, 0.0, 0.0)
+            );
         } else {
             counter++;
 

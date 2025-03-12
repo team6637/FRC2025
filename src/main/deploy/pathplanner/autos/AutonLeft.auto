@@ -17,7 +17,7 @@
               {
                 "type": "path",
                 "data": {
-                  "pathName": "BLRRStartToReef"
+                  "pathName": "LeftStartToReef"
                 }
               }
             ]
@@ -26,7 +26,7 @@
         {
           "type": "named",
           "data": {
-            "name": "AutonPrepareAndDriveToPose"
+            "name": "AutonDriveToReef"
           }
         },
         {
@@ -36,11 +36,73 @@
           }
         },
         {
+          "type": "named",
+          "data": {
+            "name": "BackOff"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "UseFrontCamera"
+          }
+        },
+        {
           "type": "parallel",
           "data": {
             "commands": [
               {
-                "type": "parallel",
+                "type": "sequential",
+                "data": {
+                  "commands": [
+                    {
+                      "type": "named",
+                      "data": {
+                        "name": "PrepareToIntake"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "path",
+                "data": {
+                  "pathName": "LeftToCoralStation"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "AutonDriveToHumanStation"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Intake"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "UseBackCamera"
+          }
+        },
+        {
+          "type": "parallel",
+          "data": {
+            "commands": [
+              {
+                "type": "path",
+                "data": {
+                  "pathName": "LeftCoralStationToReef"
+                }
+              },
+              {
+                "type": "sequential",
                 "data": {
                   "commands": [
                     {
@@ -52,16 +114,10 @@
                     {
                       "type": "named",
                       "data": {
-                        "name": "PrepareToIntake"
+                        "name": "PrepareToScore"
                       }
                     }
                   ]
-                }
-              },
-              {
-                "type": "path",
-                "data": {
-                  "pathName": "BLRRToHumanStation"
                 }
               }
             ]
@@ -70,26 +126,7 @@
         {
           "type": "named",
           "data": {
-            "name": "Intake"
-          }
-        },
-        {
-          "type": "parallel",
-          "data": {
-            "commands": [
-              {
-                "type": "named",
-                "data": {
-                  "name": "PrepareToScore"
-                }
-              },
-              {
-                "type": "path",
-                "data": {
-                  "pathName": "BLRRHumanStationToCoral"
-                }
-              }
-            ]
+            "name": "AutonDriveToReef"
           }
         },
         {
@@ -99,35 +136,9 @@
           }
         },
         {
-          "type": "parallel",
+          "type": "named",
           "data": {
-            "commands": [
-              {
-                "type": "parallel",
-                "data": {
-                  "commands": [
-                    {
-                      "type": "wait",
-                      "data": {
-                        "waitTime": 1.0
-                      }
-                    },
-                    {
-                      "type": "named",
-                      "data": {
-                        "name": "PrepareToIntake"
-                      }
-                    }
-                  ]
-                }
-              },
-              {
-                "type": "path",
-                "data": {
-                  "pathName": "BLRRLastStep"
-                }
-              }
-            ]
+            "name": "BackOff"
           }
         }
       ]

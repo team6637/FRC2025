@@ -26,10 +26,10 @@ public class Lift extends SubsystemBase {
     private boolean usingPID = true;
     private double setpointIncrementer = 1.0;
     private final PIDController pid;
-    private double level4Setpoint = 210.5;
-    private double level3Setpoint = 18;
+    private double level4Setpoint = 176.5;
+    private double level3Setpoint = 15;
     private double level2Setpoint = 67;
-    private double receiveSetpoint = 111;
+    private double receiveSetpoint = 119.6;
     private double startingSetpoint = 0.0;
     private boolean respectMinimumSetpoint = true;
     private boolean isMovingUp;
@@ -40,9 +40,6 @@ public class Lift extends SubsystemBase {
         motorRightFollower = new SparkMax(5, MotorType.kBrushless);
         pid = new PIDController(kP, 0.0, 0.0);
         pid.setTolerance(20);
-
-        SmartDashboard.putNumber("lift kp", kP);
-
         
         SparkMaxConfig globalConfig = new SparkMaxConfig();
         SparkMaxConfig motorLeftConfig = new SparkMaxConfig();
@@ -58,7 +55,7 @@ public class Lift extends SubsystemBase {
 
         motorRightFollowerConfig
             .apply(globalConfig)
-            .follow(motorLeft, true);
+            .follow(4, true);
 
         motorLeft.configure(motorLeftConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
         motorRightFollower.configure(motorRightFollowerConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
@@ -160,13 +157,16 @@ public class Lift extends SubsystemBase {
         double tempKp = isMovingUp ? upKP : kP;
         pid.setPID(tempKp, 0.0, 0.0);
 
-        SmartDashboard.putNumber("lift kp", pid.getP());
-
         if (usingPID) {
             double speed = pid.calculate(getPosition(), setpoint);
-            SmartDashboard.putNumber("lift speed", speed);
-            SmartDashboard.putNumber("lift error", pid.getError());
             motorLeft.set(speed);
         }
+
+        SmartDashboard.putNumber("lift left temp", motorLeft.getMotorTemperature());
+        SmartDashboard.putNumber("lift right temp", motorRightFollower.getMotorTemperature());
+        SmartDashboard.putNumber("lift left current", motorLeft.getOutputCurrent());
+        SmartDashboard.putNumber("lift right current", motorRightFollower.getOutputCurrent());
+
+        
     }
 }

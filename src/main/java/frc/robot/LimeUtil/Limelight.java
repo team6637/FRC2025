@@ -211,4 +211,8 @@ public class Limelight
     public double getY() {
         return LimelightHelpers.getTX(this.limelightName);
     }
+
+    public double getA() {
+        return LimelightHelpers.getTA(this.limelightName);
+    }
 }

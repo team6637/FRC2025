@@ -1,0 +1,50 @@
+{
+  "version": "2025.0",
+  "command": {
+    "type": "sequential",
+    "data": {
+      "commands": [
+        {
+          "type": "parallel",
+          "data": {
+            "commands": [
+              {
+                "type": "path",
+                "data": {
+                  "pathName": "MiddleToReef"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "PrepareToScore"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "AutonDriveToReef"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "DeliverCoral"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "PrepareToIntake"
+          }
+        }
+      ]
+    }
+  },
+  "resetOdom": true,
+  "folder": null,
+  "choreoAuto": false
+}

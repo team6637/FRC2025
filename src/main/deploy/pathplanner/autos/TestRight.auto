@@ -7,13 +7,7 @@
         {
           "type": "path",
           "data": {
-            "pathName": "TestThreeMeters"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "TestDoesn'tTurn180"
+            "pathName": "TestBlueRight"
           }
         }
       ]

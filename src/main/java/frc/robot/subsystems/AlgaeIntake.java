@@ -37,7 +37,6 @@ public class AlgaeIntake extends SubsystemBase {
     
     
     public AlgaeIntake() {
-        SmartDashboard.putNumber("algae kp", kP);
         algaeIntakeMotor = new SparkMax(8,MotorType.kBrushless);
         algaeUpDownMotor = new SparkMax(9,MotorType.kBrushless);
         throughboreEncoder = new DutyCycleEncoder(1);
@@ -116,11 +115,10 @@ public class AlgaeIntake extends SubsystemBase {
 
     @Override
     public void periodic() {
-        SmartDashboard.putNumber("algae intake position", getSensorAsDegrees());
+        //SmartDashboard.putNumber("algae intake position", getSensorAsDegrees());
 
         double speed = pid.calculate(getSensorAsDegrees(), setpoint);
-        SmartDashboard.putNumber("algae intake setpoint", setpoint);
-        SmartDashboard.putNumber("algae intake speed", speed);
+        //SmartDashboard.putNumber("algae intake setpoint", setpoint);
 
         maxLiftSpeed = 0.7;
 

@@ -4,21 +4,22 @@
 
 package frc.robot.subsystems;
 
-import com.revrobotics.spark.SparkMax;
+import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
-import com.revrobotics.spark.config.SparkMaxConfig;
+import com.revrobotics.spark.config.SparkFlexConfig;
 import com.revrobotics.spark.SparkBase.PersistMode;
 import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.wpilibj.DutyCycleEncoder;
+import edu.wpi.first.wpilibj.motorcontrol.Spark;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class Arm extends SubsystemBase {
-    private final SparkMax leftMotor;
-    private final SparkMax rightMotorFollower;
+    private final SparkFlex leftMotor;
+    private final SparkFlex rightMotorFollower;
 
     private double kP = 0.008;
     private boolean usingPID = true;
@@ -31,8 +32,8 @@ public class Arm extends SubsystemBase {
 
     private final double intakeSetpoint = 250.0;
     private final double level2Setpoint = 249.0;
-    private final double level3Setpoint = 43.0;
-    private final double level4Setpoint = 49.0;
+    private final double level3Setpoint = 49.0;
+    private final double level4Setpoint = 62.0;
     private final double startingSetpoint = 250.0;
     //if we need to turn around for level 3 the lift height needs to be at 187, angle stays same as level 2 for the arm
 
@@ -41,8 +42,8 @@ public class Arm extends SubsystemBase {
     private double minSetpoint = 24;
     
     public Arm() {
-        leftMotor = new SparkMax(1, MotorType.kBrushless);
-        rightMotorFollower = new SparkMax(2, MotorType.kBrushless);
+        leftMotor = new SparkFlex(1, MotorType.kBrushless);
+        rightMotorFollower = new SparkFlex(2, MotorType.kBrushless);
 
         throughboreEncoder = new DutyCycleEncoder(0);
         throughboreEncoder.setInverted(true);
@@ -50,9 +51,9 @@ public class Arm extends SubsystemBase {
         pid.setTolerance(5);
 
 
-        SparkMaxConfig globalConfig = new SparkMaxConfig();
-        SparkMaxConfig leftMotorConfig = new SparkMaxConfig();
-        SparkMaxConfig rightMotorFollowerConfig = new SparkMaxConfig();
+        SparkFlexConfig globalConfig = new SparkFlexConfig();
+        SparkFlexConfig leftMotorConfig = new SparkFlexConfig();
+        SparkFlexConfig rightMotorFollowerConfig = new SparkFlexConfig();
 
         globalConfig
             .smartCurrentLimit(50)

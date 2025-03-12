@@ -5,19 +5,13 @@
 package frc.robot;
 
 import java.io.File;
-import java.util.Set;
-
 import com.pathplanner.lib.auto.NamedCommands;
-
 import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.ConditionalCommand;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
@@ -27,9 +21,10 @@ import edu.wpi.first.wpilibj2.command.WaitUntilCommand;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import edu.wpi.first.wpilibj2.command.button.POVButton;
 import frc.robot.Constants.OperatorConstants;
-import frc.robot.LimeUtil.Limelight;
+import frc.robot.commands.AutoDriveRobotRelative;
 import frc.robot.commands.AutoDriveToPose;
-import frc.robot.commands.AutonPrepareAndDriveToPose;
+import frc.robot.commands.AutonDriveToReef;
+import frc.robot.commands.BackOff;
 import frc.robot.commands.DeliverCoral;
 import frc.robot.commands.Intake;
 import frc.robot.commands.PrepareToIntake;
@@ -37,7 +32,6 @@ import frc.robot.commands.PrepareToScore;
 import frc.robot.commands.TeleopDriveCommand;
 import frc.robot.subsystems.AlgaeIntake;
 import frc.robot.subsystems.Arm;
-import frc.robot.subsystems.Climber;
 import frc.robot.subsystems.CoralIntake;
 import frc.robot.subsystems.Lift;
 import frc.robot.subsystems.SwerveSubsystem;
@@ -45,7 +39,6 @@ import frc.robot.subsystems.SwerveSubsystem;
 public class RobotContainer {
     Joystick driverJoystick = new Joystick(0);
     Joystick operatorJoystick = new Joystick(1);
-    private final Limelight limelight = new Limelight("limelight");
     private final Lift lift = new Lift();
     private final Arm arm = new Arm();
     private final AlgaeIntake algaeIntake = new AlgaeIntake();
@@ -63,13 +56,15 @@ public class RobotContainer {
         drivebase = new SwerveSubsystem(
             new File(Filesystem.getDeployDirectory(), "swerve/neo"));
 
-        NamedCommands.registerCommand("PrepareToScore", new PrepareToScore(arm, lift));
+        NamedCommands.registerCommand("PrepareToScore", new PrepareToScore(arm, lift, coralIntake));
         NamedCommands.registerCommand("PrepareToIntake", new PrepareToIntake(arm, lift));
         NamedCommands.registerCommand("Intake", new Intake(arm, coralIntake, lift));
         NamedCommands.registerCommand("DeliverCoral", new DeliverCoral(arm, coralIntake, lift));
-        NamedCommands.registerCommand("AutonPrepareAndDriveToPose", new AutonPrepareAndDriveToPose(drivebase));
-        NamedCommands.registerCommand("EnableVisionPoseUpdates", new InstantCommand(()->drivebase.updateUseVisionPoseUpdates(true)));
-        NamedCommands.registerCommand("DisableVisionPoseUpdates", new InstantCommand(()->drivebase.updateUseVisionPoseUpdates(false)));
+        NamedCommands.registerCommand("AutonDriveToReef", new AutonDriveToReef(drivebase));
+        NamedCommands.registerCommand("AutonDriveToHumanStation", new AutoDriveRobotRelative(drivebase));
+        NamedCommands.registerCommand("UseFrontCamera", new InstantCommand(()->drivebase.updateUseFrontLimelight(true)));
+        NamedCommands.registerCommand("UseBackCamera", new InstantCommand(()->drivebase.updateUseFrontLimelight(false)));
+        NamedCommands.registerCommand("BackOff", new BackOff(arm));
 
 
         drivebase.setDefaultCommand(
@@ -78,7 +73,6 @@ public class RobotContainer {
                 ()-> -MathUtil.applyDeadband(driverJoystick.getY(), OperatorConstants.Y_DEADBAND),
                 ()-> -MathUtil.applyDeadband(driverJoystick.getX(), OperatorConstants.Y_DEADBAND),
                 ()-> -MathUtil.applyDeadband(driverJoystick.getTwist(), OperatorConstants.TWIST_DEADBAND),
-                limelight,
                 ()->isTurningToAngle,
                 ()->driveTargetAngle,
                 ()->isTurningToSeenAprilTagAngle,
@@ -88,10 +82,10 @@ public class RobotContainer {
 
         configureBindings();
 
-        chooser.setDefaultOption("test 1 meter ", drivebase.getAutonomousCommand("TestOneMeterForward"));
-        chooser.addOption("test 3 meters", drivebase.getAutonomousCommand("TestThreeMetersForward"));
-        chooser.addOption("Blue Left Right Red", drivebase.getAutonomousCommand("BlueLeftRedRight"));
-
+        chooser.setDefaultOption("AutonLeft", drivebase.getAutonomousCommand("AutonLeft"));
+        chooser.addOption("Test Left", drivebase.getAutonomousCommand("TestLeft"));
+        chooser.addOption("AutonRight", drivebase.getAutonomousCommand("AutonRight"));
+        chooser.addOption("AutonMiddle", drivebase.getAutonomousCommand("AutonMiddle"));
         SmartDashboard.putData(chooser);
     }
 
@@ -131,12 +125,12 @@ public class RobotContainer {
         ).onFalse(
             new SequentialCommandGroup(
                 new InstantCommand(()->coralIntake.stop(), coralIntake),
-                new InstantCommand(()->algaeIntake.stopIntake(), algaeIntake)
-           // new ConditionalCommand(
-                //new InstantCommand(()->arm.backOff(), arm),
-                //new InstantCommand(), 
-                //()->(lift.getPosition() > 200)
-                
+                new InstantCommand(()->algaeIntake.stopIntake(), algaeIntake),
+                new ConditionalCommand(
+                    new InstantCommand(()->arm.backOff(), arm),
+                    new InstantCommand(), 
+                    ()->(lift.getPosition() > 160)
+                )
             )
         );
 
@@ -185,15 +179,15 @@ public class RobotContainer {
             )
         );
 
-        // Arm Toward Back (5)
-        new JoystickButton(driverJoystick, 5).onTrue(
+        // Arm Toward Score (12)
+        new JoystickButton(driverJoystick, 12).onTrue(
             new RunCommand(()->arm.moveArmTowardBack(), arm)
         ).onFalse(
             new InstantCommand(()->arm.stop(), arm)
         );
        
-        // Arm Toward Front (10)
-        new JoystickButton(driverJoystick, 10).onTrue(
+        // Arm Toward Intake (15)
+        new JoystickButton(driverJoystick, 15).onTrue(
             new RunCommand(()->arm.moveArmTowardFront(), arm)
         ).onFalse(
             new InstantCommand(()->arm.stop(), arm)
@@ -203,20 +197,21 @@ public class RobotContainer {
         // Reset Yaw (14)
         new JoystickButton(driverJoystick, 14).onTrue(
             new InstantCommand(()->drivebase.zeroGyroWithAlliance(), drivebase)
+            //new InstantCommand(()->drivebase.zeroGyro(), drivebase)
         );
 
-        // Algae Eject High (6)
-        new JoystickButton(driverJoystick, 6).onTrue(
+        // Algae Eject High (5)
+        new JoystickButton(operatorJoystick, 5).onTrue(
             new ParallelCommandGroup(
-                new InstantCommand(()->lift.setSetpoint(170), lift),
-                new InstantCommand(()->arm.setSetpoint(120), arm)
+                new InstantCommand(()->lift.setSetpoint(66), lift),
+                new InstantCommand(()->arm.setSetpoint(115), arm)
             )
         );
-        // Algae Eject Low (9)
-        new JoystickButton(driverJoystick, 9).onTrue(
+        // Algae Eject Low (3)
+        new JoystickButton(operatorJoystick, 3).onTrue(
             new ParallelCommandGroup(
-                new InstantCommand(()->lift.setSetpoint(90), lift),
-                new InstantCommand(()->arm.setSetpoint(120), arm)
+                new InstantCommand(()->lift.setSetpoint(0), lift),
+                new InstantCommand(()->arm.setSetpoint(133), arm)
             )
         );
        
@@ -248,47 +243,45 @@ public class RobotContainer {
 
 
         // Human Station Left  (3)
-        // new JoystickButton(operatorJoystick, 3).whileTrue(
-        //     Commands.defer(()->drivebase.driveToPose(drivebase.getAbsolutePoseFromTagRelativePose(getHumanStationId(false), new Pose2d(0.25, 0, new Rotation2d()))), Set.of(drivebase))
+        // new JoystickButton(operatorJoystick, 3).onTrue(
+        //     new InstantCommand(()->{
+        //         this.driveTargetAngle = drivebase.isRedAlliance() ? 306.0 : 126.0;
+        //         this.isTurningToAngle = true;
+        //     })
+        // ).onFalse(
+        //     new InstantCommand(()->{
+        //         this.driveTargetAngle = 0.0;
+        //         this.isTurningToAngle = false;
+        //     })
         // );
-
-        new JoystickButton(operatorJoystick, 3).onTrue(
-            new InstantCommand(()->{
-                this.driveTargetAngle = drivebase.isRedAlliance() ? 306.0 : 126.0;
-                this.isTurningToAngle = true;
-            })
-        ).onFalse(
-            new InstantCommand(()->{
-                this.driveTargetAngle = 0.0;
-                this.isTurningToAngle = false;
-            })
-        );
 
         // Human Station Right (4)
-        // new JoystickButton(operatorJoystick, 4).whileTrue(
-        //     Commands.defer(()->drivebase.driveToPose(drivebase.getAbsolutePoseFromTagRelativePose(getHumanStationId(true), new Pose2d(0.25, 0, new Rotation2d()))), Set.of(drivebase))
+        // new JoystickButton(operatorJoystick, 4).onTrue(
+        //     new InstantCommand(()->{
+        //         this.driveTargetAngle = drivebase.isRedAlliance() ? 54.0 : 234.0;
+        //         this.isTurningToAngle = true;
+        //     })
+        // ).onFalse(
+        //     new InstantCommand(()->{
+        //         this.driveTargetAngle = 0.0;
+        //         this.isTurningToAngle = false;
+        //     })
         // );
-        new JoystickButton(operatorJoystick, 4).onTrue(
-            new InstantCommand(()->{
-                this.driveTargetAngle = drivebase.isRedAlliance() ? 54.0 : 234.0;
-                this.isTurningToAngle = true;
-            })
-        ).onFalse(
-            new InstantCommand(()->{
-                this.driveTargetAngle = 0.0;
-                this.isTurningToAngle = false;
-            })
+
+        // Center on CORAL STATION April Tag (10)
+        new JoystickButton(driverJoystick, 10).whileTrue(
+            new AutoDriveRobotRelative(drivebase)
         );
 
 
         // April Tag Lock Yaw With Left Offset (5)
-        new JoystickButton(operatorJoystick, 5).whileTrue(
+        new JoystickButton(driverJoystick, 5).whileTrue(
             new AutoDriveToPose(drivebase, ()->drivebase.calculateTargetReefPose(false))
         );
         
 
         // April Tag Lock Yaw With Right Offset (6)
-        new JoystickButton(operatorJoystick, 6).whileTrue(
+        new JoystickButton(driverJoystick, 6).whileTrue(
             new AutoDriveToPose(drivebase, ()->drivebase.calculateTargetReefPose(true))
         );
 
@@ -306,16 +299,20 @@ public class RobotContainer {
         // Send Lift to Level 4 (7)
         new JoystickButton(operatorJoystick, 7).onTrue(
             new ParallelCommandGroup(
+                new InstantCommand(()->drivebase.updateUseFrontLimelight(false)),
                 new InstantCommand(()->lift.goToLevel4(), lift),
-                new InstantCommand(()->arm.goToLevel4Position(), arm)
+                new InstantCommand(()->arm.goToLevel4Position(), arm),
+                new InstantCommand(()->coralIntake.inSoftly(), coralIntake)
             )
         );
 
         // Send Lift to Level 3 (9)
         new JoystickButton(operatorJoystick, 9).onTrue(
             new ParallelCommandGroup(
+                new InstantCommand(()->drivebase.updateUseFrontLimelight(false)),
                 new InstantCommand(()->lift.goToLevel3(), lift),
-                new InstantCommand(()->arm.goToLevel3Position(), arm)
+                new InstantCommand(()->arm.goToLevel3Position(), arm),
+                new InstantCommand(()->coralIntake.inSoftly(), coralIntake)
             )
         );
 
@@ -330,8 +327,10 @@ public class RobotContainer {
         // Send Lift to Receive Position (12)
         new JoystickButton(operatorJoystick, 12).onTrue(
             new ParallelCommandGroup(
+                new InstantCommand(()->drivebase.updateUseFrontLimelight(true)),
                 new InstantCommand(()->lift.goToRecieveSetpoint(), lift),
-                new InstantCommand(()->arm.goToRecievePosition(), arm)
+                new InstantCommand(()->arm.goToRecievePosition(), arm),
+                new InstantCommand(()->coralIntake.stop(), coralIntake)
             )
         );
     }

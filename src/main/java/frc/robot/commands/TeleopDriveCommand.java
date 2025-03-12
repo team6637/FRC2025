@@ -45,14 +45,13 @@ public class TeleopDriveCommand extends Command {
         DoubleSupplier vX, 
         DoubleSupplier vY, 
         DoubleSupplier vZ,
-        Limelight limelight, 
         BooleanSupplier isTurningToAngle,
         DoubleSupplier targetAngle,
         BooleanSupplier isTurningToSeenAprilTagAngle,
         BooleanSupplier isFieldOriented
     ) {
             this.swerve = swerve;
-            this.limelight = limelight;
+            this.limelight = swerve.limelight3;
             this.vX = vX;
             this.vY = vY;
             this.vZ = vZ;
@@ -138,6 +137,7 @@ public class TeleopDriveCommand extends Command {
                     angVelocity
                 )
             );
+        // robot relative
         } else {
             swerve.drive(
                 new ChassisSpeeds(

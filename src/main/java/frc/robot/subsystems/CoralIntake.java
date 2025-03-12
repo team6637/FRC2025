@@ -15,10 +15,10 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 public class CoralIntake extends SubsystemBase {
     private final SparkMax wheelMotor = new SparkMax(7, MotorType.kBrushless);
     private final DigitalInput limitSwitch = new DigitalInput(2);
-    private double speed = 0.3;
+    private double speed = 0.2;
 
     public CoralIntake() {
-        SmartDashboard.putNumber("coral intake speed", speed);
+
     }
         
 
@@ -29,6 +29,10 @@ public class CoralIntake extends SubsystemBase {
         // } else {
         //     wheelMotor.set(speed);
         // }
+    }
+
+    public void inSoftly() {
+        wheelMotor.set(0.03);
     }
 
     public void score() {
@@ -45,6 +49,6 @@ public class CoralIntake extends SubsystemBase {
 
     @Override
     public void periodic() {
-        speed = SmartDashboard.getNumber("coral intake speed", speed);
+
     }
 }
