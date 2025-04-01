@@ -19,7 +19,7 @@ public class Lift extends SubsystemBase {
     private final SparkMax motorLeft;
     private final SparkMax motorRightFollower;
     private final double minSetpoint = 0.0;
-    private final double maxSetpoint = 210.5;
+    private final double maxSetpoint = 210.0;
     private double setpoint = minSetpoint;
     private double kP = 0.034;
     private double upKP = 0.04;
@@ -27,8 +27,8 @@ public class Lift extends SubsystemBase {
     private double setpointIncrementer = 1.0;
     private final PIDController pid;
     private double level4Setpoint = 176.5;
-    private double level3Setpoint = 15;
-    private double level2Setpoint = 67;
+    private double level3Setpoint = 0;
+    private double level2Setpoint = 63;
     private double receiveSetpoint = 119.6;
     private double startingSetpoint = 0.0;
     private boolean respectMinimumSetpoint = true;
@@ -152,8 +152,6 @@ public class Lift extends SubsystemBase {
         SmartDashboard.putNumber("lift position", getPosition());
         SmartDashboard.putNumber("lift setpoint", setpoint);
 
-        // Comment out next 2 lines once the robot is tuned
-        //double tempKp = SmartDashboard.getNumber("lift kp", kP);
         double tempKp = isMovingUp ? upKP : kP;
         pid.setPID(tempKp, 0.0, 0.0);
 
@@ -164,9 +162,5 @@ public class Lift extends SubsystemBase {
 
         SmartDashboard.putNumber("lift left temp", motorLeft.getMotorTemperature());
         SmartDashboard.putNumber("lift right temp", motorRightFollower.getMotorTemperature());
-        SmartDashboard.putNumber("lift left current", motorLeft.getOutputCurrent());
-        SmartDashboard.putNumber("lift right current", motorRightFollower.getOutputCurrent());
-
-        
     }
 }

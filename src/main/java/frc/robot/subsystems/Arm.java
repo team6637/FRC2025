@@ -13,7 +13,6 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.wpilibj.DutyCycleEncoder;
-import edu.wpi.first.wpilibj.motorcontrol.Spark;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
@@ -28,18 +27,20 @@ public class Arm extends SubsystemBase {
     private final PIDController pid;
     private final DutyCycleEncoder throughboreEncoder;
 
-    private double maxSpeed = 0.6;
+    private double maxSpeed = 0.5;
 
-    private final double intakeSetpoint = 250.0;
-    private final double level2Setpoint = 249.0;
-    private final double level3Setpoint = 49.0;
-    private final double level4Setpoint = 62.0;
-    private final double startingSetpoint = 250.0;
-    //if we need to turn around for level 3 the lift height needs to be at 187, angle stays same as level 2 for the arm
+    private final double startingSetpoint = 37.0;
+    private final double intakeSetpoint = 37.0;
+    private final double level2Setpoint = 39.0;
+    private final double level3Setpoint = 239.0;
+    private final double level4Setpoint = 226.0;
+    private final double algaeEjectHighSetpoint = 278.0;
+    private final double algaeEjectLowSetpoint = 278.0;
+    private final double backOffLimit = 268.0; // backoff doesn't happen if arm is greater than this
 
     private double setpoint = startingSetpoint;
-    private double maxSetpoint = 250.0;
-    private double minSetpoint = 24;
+    private double minSetpoint = 37.0;
+    private double maxSetpoint = 278.0;
     
     public Arm() {
         leftMotor = new SparkFlex(1, MotorType.kBrushless);
@@ -49,7 +50,6 @@ public class Arm extends SubsystemBase {
         throughboreEncoder.setInverted(true);
         pid = new PIDController(kP, 0.0, 0.0);
         pid.setTolerance(5);
-
 
         SparkFlexConfig globalConfig = new SparkFlexConfig();
         SparkFlexConfig leftMotorConfig = new SparkFlexConfig();
@@ -61,7 +61,7 @@ public class Arm extends SubsystemBase {
 
         leftMotorConfig
             .apply(globalConfig)
-            .inverted(false);
+            .inverted(true);
 
         rightMotorFollowerConfig
             .apply(globalConfig)
@@ -75,8 +75,8 @@ public class Arm extends SubsystemBase {
     double tempVal;
     public double getSensorAsDegrees() {
         tempVal = throughboreEncoder.get() * 360.0;
-        if(tempVal > 260.0) tempVal = 0 - (360-tempVal);
-        return tempVal;
+        if(tempVal < 200.0) tempVal = 360+tempVal;
+        return tempVal - 200;
     }
     
     public void setSetpoint(double newSetpoint) {
@@ -91,25 +91,25 @@ public class Arm extends SubsystemBase {
 
     public void moveArmTowardBack() {
         if (usingPID) {
-            setSetpoint(setpoint -= setpointIncrementer);
-         } else {
-             if (getSensorAsDegrees() <= minSetpoint) {
-                 leftMotor.set(0.0);
-             } else {
-                 leftMotor.set(-0.2);
-             }
-         }
-    }
-    
-    public void moveArmTowardFront() {
-        if (usingPID) {
             setSetpoint(setpoint += setpointIncrementer);
         } else {
-            // account for if the sensor goes past 360 
             if (getSensorAsDegrees() >= maxSetpoint) {
                 leftMotor.set(0.0);
             } else {
                 leftMotor.set(0.2);
+            }
+        }
+    }
+    
+    public void moveArmTowardFront() {
+        if (usingPID) {
+            setSetpoint(setpoint -= setpointIncrementer);
+        } else {
+            // account for if the sensor goes past 360 
+            if (getSensorAsDegrees() <= minSetpoint) {
+                leftMotor.set(0.0);
+            } else {
+                leftMotor.set(-0.2);
             } 
         }
     }
@@ -155,9 +155,20 @@ public class Arm extends SubsystemBase {
     }
 
     public void backOff() {
-        setSetpoint(setpoint += 20);
+        setSetpoint(setpoint -= 20);
     }
 
+    public double getAlgaeEjectHighSetpoint() {
+        return this.algaeEjectHighSetpoint;
+    }
+
+    public double getAlgaeEjectLowSetpoint() {
+        return this.algaeEjectLowSetpoint;
+    }
+
+    public double getBackoffLimit() {
+        return this.backOffLimit;
+    }
 
     @Override
     public void periodic() {

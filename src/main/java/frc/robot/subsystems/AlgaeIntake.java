@@ -13,7 +13,6 @@ import com.revrobotics.spark.config.SparkMaxConfig;
 
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.wpilibj.DutyCycleEncoder;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class AlgaeIntake extends SubsystemBase {
@@ -92,6 +91,7 @@ public class AlgaeIntake extends SubsystemBase {
     public void intake() {
         if (getSensorAsDegrees() < 110.0) {
             algaeIntakeMotor.set(0.8);
+            setUsingPID(false);
         }
     }
     
@@ -111,14 +111,12 @@ public class AlgaeIntake extends SubsystemBase {
 
     public void setUsingPID(boolean v) {
         usingPID = v;
+        algaeUpDownMotor.set(0);
     }
 
     @Override
     public void periodic() {
-        //SmartDashboard.putNumber("algae intake position", getSensorAsDegrees());
-
         double speed = pid.calculate(getSensorAsDegrees(), setpoint);
-        //SmartDashboard.putNumber("algae intake setpoint", setpoint);
 
         maxLiftSpeed = 0.7;
 

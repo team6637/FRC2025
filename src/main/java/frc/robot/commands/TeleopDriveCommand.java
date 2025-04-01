@@ -11,7 +11,6 @@ import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.LimeUtil.Limelight;
 import frc.robot.subsystems.SwerveSubsystem;
@@ -21,6 +20,7 @@ public class TeleopDriveCommand extends Command {
     private final DoubleSupplier   vX;
     private final DoubleSupplier   vY;
     private final DoubleSupplier   vZ;
+    private final DoubleSupplier liftPosition;
 
     private final double maxSwerveVelocity;
     private final double maxSwerveAngularVelocity;
@@ -39,6 +39,7 @@ public class TeleopDriveCommand extends Command {
     private int seenAprilTag;
     public static final AprilTagFieldLayout fieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2025Reefscape);
 
+    private double speedModifier = 0.7;
 
     public TeleopDriveCommand(
         SwerveSubsystem swerve, 
@@ -48,7 +49,8 @@ public class TeleopDriveCommand extends Command {
         BooleanSupplier isTurningToAngle,
         DoubleSupplier targetAngle,
         BooleanSupplier isTurningToSeenAprilTagAngle,
-        BooleanSupplier isFieldOriented
+        BooleanSupplier isFieldOriented,
+        DoubleSupplier liftPosition
     ) {
             this.swerve = swerve;
             this.limelight = swerve.limelight3;
@@ -59,6 +61,7 @@ public class TeleopDriveCommand extends Command {
             this.targetAngle = targetAngle;
             this.isTurningToSeenAprilTagAngle = isTurningToSeenAprilTagAngle;
             this.isFieldOriented = isFieldOriented;
+            this.liftPosition = liftPosition;
 
             this.maxSwerveVelocity = swerve.getSwerveDrive().getMaximumChassisVelocity();
             this.maxSwerveAngularVelocity = swerve.getSwerveDrive().getMaximumChassisAngularVelocity();
@@ -73,13 +76,6 @@ public class TeleopDriveCommand extends Command {
 
     @Override
     public void execute() {
-        SmartDashboard.putNumber("april tag seen angle", aprilTagAngle);
-        SmartDashboard.putBoolean("april tag is seen", aprilTagAngleIsKnown);
-        SmartDashboard.putNumber("april tag id", seenAprilTag);
-        SmartDashboard.putNumber("april tag x", limelight.getX());
-        SmartDashboard.putNumber("april tag Y", limelight.getY());
-
-        
         double angVelocity;
         if(!isTurningToSeenAprilTagAngle.getAsBoolean()) {
             this.aprilTagAngleIsKnown = false;
@@ -129,14 +125,18 @@ public class TeleopDriveCommand extends Command {
         }
 
         
+        // field oriented
         if(isFieldOriented.getAsBoolean()) {
+            if(liftPosition.getAsDouble() < 130.0) speedModifier = 0.9;
+
             swerve.driveFieldOriented(
                 new ChassisSpeeds(
-                    xVelocity * maxSwerveVelocity * 0.7,
-                    yVelocity * maxSwerveVelocity * 0.7,
+                    xVelocity * maxSwerveVelocity * speedModifier,
+                    yVelocity * maxSwerveVelocity * speedModifier,
                     angVelocity
                 )
             );
+
         // robot relative
         } else {
             swerve.drive(
@@ -149,6 +149,8 @@ public class TeleopDriveCommand extends Command {
         }
 
     }
+
+
 
     @Override
     public void end(boolean interrupted) {}

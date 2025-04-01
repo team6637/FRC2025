@@ -20,7 +20,7 @@ public class DeliverCoral extends SequentialCommandGroup {
         addCommands(
             new WaitUntilCommand(()->lift.atSetpoint()),
             new WaitUntilCommand(()->arm.atSetpoint()),
-            new RunCommand(()->coralIntake.score(), coralIntake).withTimeout(0.5),
+            new RunCommand(()->coralIntake.score(), coralIntake).withTimeout(0.4),
             new InstantCommand(()->coralIntake.stop(), coralIntake)
         );
     }

@@ -32,7 +32,6 @@ import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
@@ -96,21 +95,13 @@ public class SwerveSubsystem extends SubsystemBase
         swerveDrive.setModuleEncoderAutoSynchronize(false,
         1);
 
-        setupVision();
-
         if(useVisionPoseUpdates) {
             // Stop the odometry thread if we are using vision that way we can synchronize updates better.
             swerveDrive.stopOdometryThread();
         }
 
         setupPathPlanner();
-
-        // Pose3d aprilTagPose = fieldLayout.getTagPose(1);
-
-        // SmartDashboard.putNumber("april tag pose", 
-
-        //zeroGyroWithAlliance();
-        
+    
     }
 
     /**
@@ -128,15 +119,6 @@ public class SwerveSubsystem extends SubsystemBase
         Rotation2d.fromDegrees(0)));
     }
 
-    /**
-     * Setup the limelight vision class.
-     */
-    public void setupVision()
-    {
-        //vision = new Vision(swerveDrive::getPose);
-    }
-
-
     @Override
     public void periodic()
     {
@@ -145,9 +127,9 @@ public class SwerveSubsystem extends SubsystemBase
             updatePoseEstimation();
         }
 
-        SmartDashboard.putNumber("pose x", getPose().getX());
-        SmartDashboard.putNumber("pose y", getPose().getY());
-        SmartDashboard.putNumber("pose z", getPose().getRotation().getDegrees());
+        // SmartDashboard.putNumber("pose x", getPose().getX());
+        // SmartDashboard.putNumber("pose y", getPose().getY());
+        // SmartDashboard.putNumber("pose z", getPose().getRotation().getDegrees());
     }
 
     @Override
@@ -790,9 +772,9 @@ public class SwerveSubsystem extends SubsystemBase
             tagRelativePose2d.getTranslation(), 
             tagRelativePose2d.getRotation()));
 
-            SmartDashboard.putNumber("target pose x", finalPose.getX());
-            SmartDashboard.putNumber("target pose y", finalPose.getY());
-            SmartDashboard.putNumber("target pose z", finalPose.getRotation().getDegrees());
+            // SmartDashboard.putNumber("target pose x", finalPose.getX());
+            // SmartDashboard.putNumber("target pose y", finalPose.getY());
+            // SmartDashboard.putNumber("target pose z", finalPose.getRotation().getDegrees());
         return finalPose;
     }
 

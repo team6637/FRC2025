@@ -6,16 +6,14 @@ package frc.robot.subsystems;
 
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
-import com.revrobotics.spark.config.LimitSwitchConfig;
 
 import edu.wpi.first.wpilibj.DigitalInput;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class CoralIntake extends SubsystemBase {
     private final SparkMax wheelMotor = new SparkMax(7, MotorType.kBrushless);
     private final DigitalInput limitSwitch = new DigitalInput(2);
-    private double speed = 0.2;
+    private double speed = 0.3;
 
     public CoralIntake() {
 
@@ -32,7 +30,7 @@ public class CoralIntake extends SubsystemBase {
     }
 
     public void inSoftly() {
-        wheelMotor.set(0.03);
+        wheelMotor.set(0.05);
     }
 
     public void score() {

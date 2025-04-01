@@ -4,14 +4,9 @@
 
 package frc.robot.commands;
 
-import java.util.Optional;
-import java.util.function.Supplier;
-
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.SwerveSubsystem;
 
@@ -27,7 +22,7 @@ public class AutoDriveRobotRelative extends Command {
     private double yVelocity;
     private double angVelocity;
     private int counter = 0;
-    private double targetX;
+    private double currentArea;
     private double targetY;
     private double targetRotation;
 
@@ -59,11 +54,11 @@ public class AutoDriveRobotRelative extends Command {
 
             targetRotation = aprilTagPose.getRotation().getDegrees() + 180;
             targetY = swerve.limelightFront.getX() * -1;
-            targetX = swerve.limelightFront.getA();
+            currentArea = swerve.limelightFront.getA();
             
             counter++;
             
-            xVelocity = xController.calculate(targetX, 16.9);
+            xVelocity = xController.calculate(currentArea, 16.9);
             yVelocity = yController.calculate(0.0, targetY);
             angVelocity = turnKp * Math.IEEEremainder(targetRotation - swerve.getHeading().getDegrees(), 360);
 
@@ -96,14 +91,5 @@ public class AutoDriveRobotRelative extends Command {
     @Override
     public boolean isFinished() {
         return counter > 74;
-    }
-
-    public double calculateX(double y) {
-        double aprilTagHeight = 1.49;
-        double llHeight = 1.35;
-        double angleDegrees = 15.0 + y;
-        double distanceFromLimelightToFrontOfBot = 0.3;
-        double distance = ((aprilTagHeight-llHeight) / Math.tan(Math.toRadians(angleDegrees))) - distanceFromLimelightToFrontOfBot;
-        return distance;
     }
 }
