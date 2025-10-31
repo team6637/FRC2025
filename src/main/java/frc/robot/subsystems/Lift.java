@@ -27,7 +27,7 @@ public class Lift extends SubsystemBase {
     private double setpointIncrementer = 1.0;
     private final PIDController pid;
     private double level4Setpoint = 176.5;
-    private double level3Setpoint = 0;
+    private double level3Setpoint = 0.0;
     private double level2Setpoint = 63;
     private double receiveSetpoint = 119.6;
     private double startingSetpoint = 0.0;
